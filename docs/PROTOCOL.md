@@ -28,7 +28,7 @@ All in the lobby's config (`worker/wrangler.jsonc` `vars`), provisional until Ph
 | `COUNTDOWN` | 5 | Seconds of goodbye (D-10). |
 | `ROOM_MAX` | 30 min | Longest room. |
 | `PEER_COOLDOWN` | 60 s | Do not re-pair the same two people within this window. |
-| `OPEN_RETRY` | 30 s | If a window never connects after "open", one more "open" is allowed. |
+| `OPEN_RETRY` | 30 s | If no window ever connected after "open", one more "open" is allowed. |
 | `TICKET_TTL` | 10 min | A room ticket must be used within this time. |
 
 ## 3. Hook events
@@ -78,7 +78,7 @@ none ──started──▶ armed ──T──▶ queued ◀──▶ paused �
 - `paused`: `needs_you` or `paused` arrived. Not pairable. If in a room, the away line posts. Any `started` or `tick` resumes to `queued` and posts "back".
 - `done`: `stopped`, or grace over, or silence. A connected window closes with a countdown if in a room, at once if alone. A later hook of any kind starts a new task.
 
-Rules: one "open" per task (D-68), plus one retry if the window never connected (OPEN_RETRY). Closing the window by hand marks the task opted out: no reopen, no pairing, until the next task. Hanging up does the same (D-49). One live window per token (D-50).
+Rules: one "open" per task (D-68), plus one retry after OPEN_RETRY only if no window ever connected; a window that drops reconnects on its own with the same ticket. A ticket is bound to its task and dies with it. Closing the window by hand marks the task opted out: no reopen, no pairing, until the next task. Hanging up does the same (D-49). One live window per token (D-50).
 
 ## 5. Window states
 
@@ -101,17 +101,17 @@ JSON, one object per frame, `type` first. Server to window:
 | `state` | `state: "shaded" \| "room" \| "closing"` | on every change |
 | `line` | `key`, `who: "sys" \| "you" \| "them" \| "soft"`, `n?` | a log line; text from `copy.js` |
 | `match` | `role: "offer" \| "answer"`, `room`, `iceServers` | a stranger; start WebRTC |
-| `signal` | `data` (SDP or ICE, opaque) | relayed from the peer |
+| `signal` | `room`, `data` (SDP or ICE, opaque) | relayed from the peer; drop it if `room` is not your current room |
 | `peer` | `video: bool` | the peer toggled video |
-| `countdown` | `n`, `mine: bool`, `reason: "done" \| "hangup"` | once a second, n from COUNTDOWN to 0 |
+| `countdown` | `n`, `mine: bool`, `reason: "done"` | once a second, n from COUNTDOWN down to 1; then `close` (or `left` on the other side) |
 | `close` | `reason: "done" \| "hangup" \| "quiet" \| "off" \| "rehearsal" \| "manual"` | close yourself after the line |
 
 Window to server:
 
 | type | fields | meaning |
 | --- | --- | --- |
-| `signal` | `data` | relay to the peer |
-| `speech` | `active: bool` | edge-triggered from the local meter, at most every 2 s |
+| `signal` | `room`, `data` | relay to the peer; the lobby drops frames for a room you are not in |
+| `speech` | `active: bool` | edge-triggered from the local meter: true when speech starts, false about 1.5 s after it stops; at most one frame per 2 s |
 | `video` | `on: bool` | toggled video |
 | `hangup` | | leave; out for this task |
 | `report` | | leave and flag the peer |
@@ -160,7 +160,7 @@ plugin  → hook stopped            ← {}     window ← state closing · count
 
 Candidates: task `queued` (not paused), a hook within F, a connected window that is not a rehearsal, not in a room, not blocked, not opted out. Sort by task start, oldest first. Pair greedily, skipping a pair that were together within PEER_COOLDOWN. The first of the pair gets `role: "offer"`.
 
-`others` = number of candidates minus you. The terminal's `status` shows the same count.
+`others` and the terminal's count are the people whose Claude is working: a live shaded window, a task that is not done, not paused (Claude waiting on them), not in a room, not blocked. Freshness is not applied to the count, so a long tool call does not make the number flicker (D-85).
 
 ## 10. TURN
 

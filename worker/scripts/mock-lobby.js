@@ -65,7 +65,7 @@ server.on('upgrade', (req, socket, head) => {
     const fx = lobby.apply({ kind: 'ws_open', ticket: url.searchParams.get('t'), now: Date.now() });
     const attach = fx.find((f) => f.type === 'attach');
     if (!attach?.ok) { ws.close(4001, 'bad ticket'); return; }
-    const { token, rehearsal } = attach;
+    const { token, rehearsal, conn } = attach;
     if (!rehearsal) sockets.set(token, ws); else sockets.set(token + '#r', ws);
     const key = rehearsal ? token + '#r' : token;
     // deliver this open's own effects (hello and friends) now that the socket is registered
@@ -73,11 +73,11 @@ server.on('upgrade', (req, socket, head) => {
     ws.on('message', (data) => {
       let msg; try { msg = JSON.parse(String(data)); } catch { return; }
       if (rehearsal) return;
-      runEffects(lobby.apply({ kind: 'ws_msg', token, msg, now: Date.now() }));
+      runEffects(lobby.apply({ kind: 'ws_msg', token, conn, msg, now: Date.now() }));
     });
     ws.on('close', () => {
       if (sockets.get(key) === ws) sockets.delete(key);
-      runEffects(lobby.apply({ kind: 'ws_close', token, rehearsal, now: Date.now() }));
+      runEffects(lobby.apply({ kind: 'ws_close', token, conn, rehearsal, now: Date.now() }));
     });
   });
 });
