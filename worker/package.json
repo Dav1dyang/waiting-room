@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "description": "The waiting-room lobby: one Cloudflare Worker, one Durable Object, and the room window.",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test test/*.test.js",
     "mock": "node scripts/mock-lobby.js",
@@ -13,6 +15,7 @@
     "e2e": "node --test e2e/*.test.js"
   },
   "devDependencies": {
+    "playwright": "^1.63.0",
     "wrangler": "^4.129.0",
     "ws": "^8.18.0"
   }
