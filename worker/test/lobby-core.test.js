@@ -159,7 +159,7 @@ test('stop in a room: countdown on both sides, then close and shade', () => {
   const l = mk();
   bringUp(l, 'tokenaaaa1', 0);
   const t0 = bringUp(l, 'tokenbbbb2', 1 * S) + S;
-  let fx = l.apply({ kind: 'hook', token: 'tokenaaaa1', event: 'stopped', now: t0, origin: ORIGIN });
+  let fx = l.apply({ kind: 'hook', token: 'tokenaaaa1', event: 'stopped', session: 'abcd', now: t0, origin: ORIGIN });
   assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['state:closing', 'countdown:5']);
   assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['state:closing', 'countdown:5']);
   assert.equal(sends(fx, 'tokenaaaa1')[1].mine, true);
@@ -179,7 +179,7 @@ test('stop in a room: countdown on both sides, then close and shade', () => {
 test('stop while shaded and alone closes at once', () => {
   const l = mk();
   const now = bringUp(l, 'tokenaaaa1', 0);
-  const fx = l.apply({ kind: 'hook', token: 'tokenaaaa1', event: 'stopped', now: now + S, origin: ORIGIN });
+  const fx = l.apply({ kind: 'hook', token: 'tokenaaaa1', event: 'stopped', session: 'abcd', now: now + S, origin: ORIGIN });
   assert.deepEqual(sends(fx), [{ type: 'close', reason: 'done' }]);
   assert.ok(fx.find((f) => f.type === 'close'));
 });
@@ -293,7 +293,7 @@ test('rehearsal rides the next hook and touches no queue', () => {
   assert.ok(hook(l, 'tokenaaaa1', 'tick', 16 * S).open, 'the real open still comes at T');
 });
 
-test('three reports in a day block a token; report also hangs up', () => {
+test('flags from two different people block a token; a report is also a hang-up', () => {
   const l = mk({ REPORT_BLOCK: 2, PEER_COOLDOWN: 0 });
   bringUp(l, 'tokenaaaa1', 0);
   let now = bringUp(l, 'tokenbbbb2', 1 * S) + S;
@@ -301,15 +301,15 @@ test('three reports in a day block a token; report also hangs up', () => {
   assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['line:reported', 'close']);
   assert.deepEqual(kinds(fx, 'tokenbbbb2').slice(0, 2), ['line:left', 'state:shaded']);
   assert.equal(l.s.tokens.tokenbbbb2.blockedUntil, 0);
-  // a new task for A, pair again, report again
-  l.apply({ kind: 'ws_close', token: 'tokenaaaa1', now });
-  hook(l, 'tokenaaaa1', 'stopped', now + S);
-  now = bringUp(l, 'tokenaaaa1', now + 2 * S);
+  wsMsg(l, 'tokenaaaa1', { type: 'report' }, now + 1);
+  assert.equal(Object.keys(l.s.tokens.tokenbbbb2.reports).length, 1, 'one flag per reporter');
+  now = bringUp(l, 'tokencccc3', now + 2 * S);
   hook(l, 'tokenbbbb2', 'tick', now);
   tick(l, now + 1);
-  assert.ok(l.s.tokens.tokenbbbb2.room, 'paired again');
-  wsMsg(l, 'tokenaaaa1', { type: 'report' }, now + S);
-  assert.ok(l.s.tokens.tokenbbbb2.blockedUntil > now, 'blocked');
+  assert.ok(l.s.tokens.tokenbbbb2.room, 'B and C paired');
+  fx = wsMsg(l, 'tokencccc3', { type: 'report' }, now + S);
+  assert.ok(l.s.tokens.tokenbbbb2.blockedUntil > now, 'blocked by two people');
+  assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['line:left', 'close'], 'a blocked window closes instead of shading');
   assert.deepEqual(hook(l, 'tokenbbbb2', 'tick', now + 2 * S), {});
 });
 
@@ -348,7 +348,7 @@ test('state survives a JSON round trip', () => {
   bringUp(l, 'tokenaaaa1', 0);
   const now = bringUp(l, 'tokenbbbb2', 1 * S);
   const copy = new Lobby({ invites: ['DUCK'] }, JSON.parse(JSON.stringify(l.s)), () => 'z');
-  const fx = copy.apply({ kind: 'hook', token: 'tokenaaaa1', event: 'stopped', now: now + S, origin: ORIGIN });
+  const fx = copy.apply({ kind: 'hook', token: 'tokenaaaa1', event: 'stopped', session: 'abcd', now: now + S, origin: ORIGIN });
   assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['state:closing', 'countdown:5']);
 });
 
@@ -396,7 +396,8 @@ test('a rehearsal waits while a real window is live', () => {
   l.apply({ kind: 'rehearse', token: 'tokenaaaa1', now });
   assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', now + S), {}, 'deferred');
   l.apply({ kind: 'ws_close', token: 'tokenaaaa1', conn: l.s.tokens.tokenaaaa1.win.conn, now: now + 2 * S });
-  const r = hook(l, 'tokenaaaa1', 'tick', now + 3 * S);
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', now + 3 * S), {}, 'still deferred: the window may come back');
+  const r = hook(l, 'tokenaaaa1', 'tick', now + 3 * S + DEFAULTS.RECONNECT_GRACE);
   assert.ok(r.open);
   assert.equal(l.s.tickets[ticketOf(r)].rehearsal, true);
 });
@@ -432,6 +433,8 @@ test('a socket event from a superseded connection is ignored', () => {
   assert.equal(sends(fx).length, 0);
   assert.ok(l.s.tokens.tokenaaaa1.room, 'still in the room');
   l.apply({ kind: 'ws_close', token: 'tokenaaaa1', conn: l.s.tokens.tokenaaaa1.win.conn, now: now + 2 });
+  assert.ok(l.s.tokens.tokenaaaa1.room, 'a drop keeps the room for a grace period');
+  tick(l, now + 2 + DEFAULTS.RECONNECT_GRACE + 1);
   assert.equal(l.s.tokens.tokenaaaa1.room, null);
 });
 
@@ -478,4 +481,124 @@ test('the count leaves out people whose Claude is waiting on them', () => {
   assert.equal(l.count(), 2);
   hook(l, 'tokenaaaa1', 'needs_you', now);
   assert.equal(l.count(), 1);
+});
+
+test('a late stop from an earlier turn cannot end the task; a late tick cannot revive it', () => {
+  const l = mk();
+  reg(l, 'tokenaaaa1');
+  const H = (event, now, ts) => l.apply({ kind: 'hook', token: 'tokenaaaa1', event, session: 's1', ts, now, origin: ORIGIN }).find((f) => f.type === 'reply').body;
+  H('started', 0, 1000);
+  H('tick', 20 * S, 21000);
+  H('stopped', 21 * S, 20500);
+  assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'queued', 'the stop was older than the last tick');
+  H('stopped', 22 * S, 22000);
+  assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'done');
+  H('tick', 23 * S, 21900);
+  assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'done', 'a tick older than the stop is ignored');
+  H('tick', 24 * S, 24000);
+  assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'armed', 'a newer tick starts a fresh task');
+});
+
+test('two Claude sessions on one machine: the task ends when the last one stops', () => {
+  const l = mk();
+  reg(l, 'tokenaaaa1');
+  const H = (event, session, now) => l.apply({ kind: 'hook', token: 'tokenaaaa1', event, session, now, origin: ORIGIN }).find((f) => f.type === 'reply').body;
+  H('started', 's1', 0);
+  H('started', 's2', 1 * S);
+  assert.ok(H('tick', 's1', 15 * S).open);
+  H('stopped', 's1', 16 * S);
+  assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'queued', 's2 still works');
+  H('stopped', 's2', 17 * S);
+  assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'done');
+});
+
+test('a dropped socket reconnects into its room within the grace; beyond it the peer is told', () => {
+  const l = mk();
+  bringUp(l, 'tokenaaaa1', 0);
+  const now = bringUp(l, 'tokenbbbb2', 1 * S);
+  const ta = l.s.tokens.tokenaaaa1;
+  const ticket = ta.win.ticket;
+  let fx = l.apply({ kind: 'ws_close', token: 'tokenaaaa1', conn: ta.win.conn, now: now + S });
+  assert.equal(sends(fx, 'tokenbbbb2').length, 0, 'the peer hears nothing yet');
+  fx = wsOpen(l, ticket, now + 3 * S);
+  assert.equal(fx.find((f) => f.type === 'attach').ok, true);
+  assert.equal(sends(fx, 'tokenaaaa1')[0].state, 'room');
+  assert.ok(ta.room);
+  l.apply({ kind: 'ws_close', token: 'tokenaaaa1', conn: ta.win.conn, now: now + 4 * S });
+  fx = tick(l, now + 4 * S + DEFAULTS.RECONNECT_GRACE + 1);
+  assert.deepEqual(kinds(fx, 'tokenbbbb2').slice(0, 2), ['line:left', 'state:shaded']);
+  assert.equal(ta.win, null);
+});
+
+test('a speaking flag that stops being refreshed counts as silence', () => {
+  const l = mk();
+  bringUp(l, 'tokenaaaa1', 0);
+  const now = bringUp(l, 'tokenbbbb2', 1 * S);
+  wsMsg(l, 'tokenaaaa1', { type: 'speech', active: true }, now + S);
+  assert.equal(sends(tick(l, now + 40 * S)).length, 0);
+  const fx = tick(l, now + 47 * S);
+  assert.deepEqual(kinds(fx, 'tokenaaaa1').slice(0, 1), ['line:quiet_room']);
+});
+
+test('reporting after the stranger left flags them and keeps your window', () => {
+  const l = mk();
+  bringUp(l, 'tokenaaaa1', 0);
+  const now = bringUp(l, 'tokenbbbb2', 1 * S);
+  wsMsg(l, 'tokenbbbb2', { type: 'hangup' }, now + S);
+  const fx = wsMsg(l, 'tokenaaaa1', { type: 'report' }, now + 2 * S);
+  assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['line:reported']);
+  assert.ok(l.s.tokens.tokenbbbb2.reports.tokenaaaa1);
+  assert.equal(l.s.tokens.tokenaaaa1.task.optedOut, false);
+  assert.ok(l.s.tokens.tokenaaaa1.win.connected);
+});
+
+test('nextDeadline points at the next thing that changes on its own', () => {
+  const l = mk();
+  assert.equal(l.nextDeadline(0), null);
+  reg(l, 'tokenaaaa1');
+  hook(l, 'tokenaaaa1', 'started', 0);
+  assert.equal(l.nextDeadline(1), DEFAULTS.T, 'the threshold');
+  const now = bringUp(l, 'tokenaaaa1', 0);
+  assert.equal(l.nextDeadline(now), DEFAULTS.T + DEFAULTS.N, 'the silence limit after the last hook');
+  const t0 = bringUp(l, 'tokenbbbb2', 1 * S) + S;
+  hook(l, 'tokenaaaa1', 'stopped', t0);
+  assert.equal(l.nextDeadline(t0), t0 + 1000, 'the next countdown second');
+  assert.ok(l.nextDeadline(t0 + 999) >= t0 + 999 + 250, 'never sooner than 250 ms out');
+});
+
+test('an old snapshot hydrates and runs', () => {
+  const old = { tokens: { tokenaaaa1: { enabled: true, invite: 'DUCK', lastHookAt: 0, task: { id: 1, startedAt: 0, lastSignalAt: 0, phase: 'queued', opens: 1, lastOpenAt: 0, optedOut: false },
+    win: { connected: true, since: 0, ticket: 'id1', conn: 'c1' }, room: 'r1', lastPeer: 'tokenbbbb2', lastPeerAt: 0, rehearse: false, reports: [], blockedUntil: 0, probes: [] },
+    tokenbbbb2: { enabled: true, invite: 'DUCK', lastHookAt: 0, task: { id: 2, startedAt: 0, lastSignalAt: 0, phase: 'queued', opens: 1, lastOpenAt: 0, optedOut: false },
+    win: { connected: true, since: 0, ticket: 'id2', conn: 'c2' }, room: 'r1', lastPeer: null, lastPeerAt: 0, rehearse: false, reports: [], blockedUntil: 0, probes: [] } },
+    rooms: { r1: { id: 'r1', a: 'tokenaaaa1', b: 'tokenbbbb2', createdAt: 0, lastSpeechAt: 0, video: {}, closing: null } },
+    tickets: { id1: { token: 'tokenaaaa1', exp: 1e12 }, id2: { token: 'tokenbbbb2', exp: 1e12 } }, seq: 2 };
+  const l = new Lobby({ invites: ['DUCK'] }, old, () => 'z');
+  assert.equal(l.s.v, 2);
+  const fx = l.apply({ kind: 'ws_close', token: 'tokenaaaa1', conn: 'c1', now: 1 * S });
+  assert.ok(Array.isArray(fx));
+  assert.deepEqual(kinds(tick(l, 50 * S), 'tokenbbbb2').slice(0, 2), ['line:left', 'state:shaded'], 'the dropped window gave up, the peer shades');
+});
+
+test('a window adopted by a new task during the goodbye needs no second window', () => {
+  const l = mk();
+  bringUp(l, 'tokenaaaa1', 0);
+  const t0 = bringUp(l, 'tokenbbbb2', 1 * S) + S;
+  hook(l, 'tokenaaaa1', 'stopped', t0);
+  hook(l, 'tokenaaaa1', 'started', t0 + 2 * S);
+  tick(l, t0 + 5 * S);
+  const ta = l.s.tokens.tokenaaaa1;
+  assert.ok(ta.win && ta.win.connected);
+  assert.equal(l.s.tickets[ta.win.ticket].taskId, ta.task.id, 'the ticket now belongs to the new task');
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', t0 + 20 * S), {}, 'no second window');
+  l.apply({ kind: 'ws_close', token: 'tokenaaaa1', conn: ta.win.conn, now: t0 + 21 * S });
+  assert.equal(wsOpen(l, ta.win.ticket, t0 + 22 * S).find((f) => f.type === 'attach').ok, true, 'and it can reconnect');
+});
+
+test('an unknown event word changes nothing', () => {
+  const l = mk();
+  reg(l, 'tokenaaaa1');
+  assert.deepEqual(hook(l, 'tokenaaaa1', '', 0), {});
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'constructor', 0), {});
+  assert.equal(l.s.tokens.tokenaaaa1.task, null);
 });

@@ -15,7 +15,7 @@ Nothing about the task leaves the machine. A hook POST carries a token, an event
 
 ## 2. Numbers
 
-All in the lobby's config (`worker/wrangler.jsonc` `vars`), provisional until Phase 0 logging.
+All in the lobby's config (`worker/wrangler.jsonc` `vars`), provisional until Phase 0 logging. The lobby sleeps between deadlines: its alarm lands exactly when the next threshold, silence, grace, quiet, or countdown second is due, never on a fixed tick.
 
 | Name | Value | Meaning |
 | --- | --- | --- |
@@ -30,6 +30,7 @@ All in the lobby's config (`worker/wrangler.jsonc` `vars`), provisional until Ph
 | `PEER_COOLDOWN` | 60 s | Do not re-pair the same two people within this window. |
 | `OPEN_RETRY` | 30 s | If no window ever connected after "open", one more "open" is allowed. |
 | `TICKET_TTL` | 10 min | A room ticket must be used within this time. |
+| `RECONNECT_GRACE` | 15 s | A dropped socket keeps its window and room this long. |
 
 ## 3. Hook events
 
@@ -52,13 +53,15 @@ The plugin classifies on the machine (`plugin/scripts/signal.sh`) and sends one 
 
 Reply `{}` or, at most once per task, `{ "open": "https://…/room?t=TICKET" }`. The plugin opens that URL in a Chrome app window behind the terminal, under an atomic lock, and never prints anything.
 
+`ts` is the plugin's clock and `session` is a hash of the Claude Code session id. Hooks are async, so they can arrive out of order: a `stopped` older than the newest `started` or `tick` is ignored, and a `tick` older than the `stopped` that ended the task is ignored. One machine can run several Claude sessions: a task ends when the last session that touched it stops (D-09). Nothing else in the body is read.
+
 Other HTTP routes:
 
 | Route | Body or query | Reply |
 | --- | --- | --- |
 | `POST /api/register` | `{ token, invite }` | `{ ok, count, setup }` or `{ ok:false, error:"invite" }` |
 | `POST /api/off` | `{ token }` | `{ ok }`, closes any window |
-| `GET /api/count?t=TOKEN` | | `{ count, enabled }` |
+| `GET /api/count?t=TOKEN` | | `{ count, enabled }`; count means others, never you |
 | `POST /api/rehearse` | `{ token }` | `{ ok }`, next hook opens a test window (D-84) |
 | `GET /api/probes?t=TOKEN` | | own Phase 0 probe records |
 | `GET /ws?t=TICKET` | | WebSocket upgrade |
@@ -76,9 +79,9 @@ none ──started──▶ armed ──T──▶ queued ◀──▶ paused �
 - `armed`: started less than T ago. Nothing visible.
 - `queued`: past T. Eligible for "open" (once) and, with a connected shaded window and a fresh hook, for pairing.
 - `paused`: `needs_you` or `paused` arrived. Not pairable. If in a room, the away line posts. Any `started` or `tick` resumes to `queued` and posts "back".
-- `done`: `stopped`, or grace over, or silence. A connected window closes with a countdown if in a room, at once if alone. A later hook of any kind starts a new task.
+- `done`: `stopped`, or grace over, or silence. A connected window closes with a countdown if in a room, at once if alone. A later hook of any kind starts a new task. If a new task starts during the goodbye, the window stays and shades instead of closing.
 
-Rules: one "open" per task (D-68), plus one retry after OPEN_RETRY only if no window ever connected; a window that drops reconnects on its own with the same ticket. A ticket is bound to its task and dies with it. Closing the window by hand marks the task opted out: no reopen, no pairing, until the next task. Hanging up does the same (D-49). One live window per token (D-50).
+Rules: one "open" per task (D-68), plus one retry after OPEN_RETRY only if no window ever connected. A window whose socket drops keeps its place for RECONNECT_GRACE (15 s): the room survives, the peer hears nothing, and the page reconnects with the same ticket; past the grace the peer sees "left" and shades. A ticket is bound to its task, lives as long as the task once used, and dies with it. Closing the window by hand marks the task opted out: no reopen, no pairing, until the next task. Hanging up does the same (D-49). One live window per token (D-50).
 
 ## 5. Window states
 
@@ -114,7 +117,7 @@ Window to server:
 | `speech` | `active: bool` | edge-triggered from the local meter: true when speech starts, false about 1.5 s after it stops; at most one frame per 2 s |
 | `video` | `on: bool` | toggled video |
 | `hangup` | | leave; out for this task |
-| `report` | | leave and flag the peer |
+| `report` | | flag the peer (one flag per reporter per day) and leave; with no room, flag the last peer of the past minute and stay |
 | `bye` | `reason: "manual"` | sent on pagehide when the window was not told to close |
 | `probe` | `data` | Phase 0 measurements, stored per token |
 
@@ -168,4 +171,4 @@ Candidates: task `queued` (not paused), a hook within F, a connected window that
 
 ## 11. Abuse and safety
 
-Every route needs a registered token; registration needs an invite code from `INVITES` (empty means open, alpha uses a code). Report flags the peer; three flags in a day block a token for a day. Rooms never carry text. Nothing is stored beyond the lobby's in-memory state, a small SQLite blob for restarts, and the probe records you asked for.
+Every route needs a registered token; registration needs an invite code from `INVITES` (empty means open, alpha uses a code). Report flags the peer; flags from three different people in a day block a token for a day, and a blocked window closes at once. Tokens with no activity for 30 days are forgotten. Rooms never carry text. Nothing is stored beyond the lobby's in-memory state, a small SQLite blob for restarts, and the probe records you asked for.

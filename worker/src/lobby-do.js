@@ -6,8 +6,8 @@
 // and an attachment {token, rehearsal, conn}. The conn goes back into every socket event so
 // a late callback from a replaced socket cannot touch the window that took its place.
 //
-// State is small, so the whole snapshot is written after every apply. Sweeping is one alarm
-// a second, alive only while some task is running or some room exists.
+// State is small, so the whole snapshot is written after every apply. The sweep alarm lands
+// exactly when the core says the next deadline is (a threshold, a silence, a countdown second).
 
 import { DurableObject } from 'cloudflare:workers';
 import { Lobby } from './lobby-core.js';
@@ -66,6 +66,10 @@ export class LobbyObject extends DurableObject {
     if (kind === 'hook') {
       ev.event = typeof body.event === 'string' ? body.event : '';
       ev.why = typeof body.why === 'string' ? body.why : null;
+      // The plugin's own clock and hashed session id: hooks are async and can arrive out of order,
+      // and one machine can run several Claude sessions. Nothing else from the body is read.
+      ev.session = typeof body.session === 'string' ? body.session.slice(0, 32) : '';
+      if (Number.isFinite(body.ts)) ev.ts = body.ts;
     }
     return json(await this.run(ev));
   }
@@ -98,6 +102,9 @@ export class LobbyObject extends DurableObject {
     const attach = fx.find((f) => f.type === 'attach');
     await this.save();
     if (!attach || !attach.ok) {
+      // The core still swept on this event; deliver whatever it decided for other windows.
+      await addTurn(fx, this.env, this.ctx);
+      this.dispatch(fx);
       server.accept();
       server.close(4001, 'bad ticket');
       return new Response(null, { status: 101, webSocket: client });
@@ -108,7 +115,7 @@ export class LobbyObject extends DurableObject {
     await addTurn(fx, this.env, this.ctx);
     // The new socket is not in getWebSockets() results until this request returns, so its own
     // frames (hello, and a match if this connection completed a pair) are handed over directly.
-    this.dispatch(fx, server, token);
+    this.dispatch(fx, server, token, rehearsal);
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -149,18 +156,16 @@ export class LobbyObject extends DurableObject {
     await this.run({ kind: 'tick', now: Date.now() });
   }
 
-  /** One alarm a second while anything can change on its own. */
+  /** The core knows when something next changes on its own; the alarm lands exactly then. */
   async schedule() {
-    if (!this.busy()) return;
-    if ((await this.ctx.storage.getAlarm()) !== null) return;
-    await this.ctx.storage.setAlarm(Date.now() + TICK_MS);
-  }
-
-  busy() {
-    const s = this.lobby.s;
-    for (const _ of Object.keys(s.rooms)) return true;
-    for (const t of Object.values(s.tokens)) if (t.task && t.task.phase !== 'done') return true;
-    return false;
+    const next = this.lobby.nextDeadline(Date.now());
+    if (next === null) {
+      if ((await this.ctx.storage.getAlarm()) !== null) await this.ctx.storage.deleteAlarm();
+      return;
+    }
+    const current = await this.ctx.storage.getAlarm();
+    if (current !== null && Math.abs(current - next) < TICK_MS / 4) return;
+    await this.ctx.storage.setAlarm(next);
   }
 
   // ---------- plumbing ----------
@@ -178,15 +183,16 @@ export class LobbyObject extends DurableObject {
   }
 
   /** Sends first, closes after, exactly in the order the core listed them. */
-  dispatch(fx, direct = null, directToken = null) {
+  dispatch(fx, direct = null, directToken = null, directRehearsal = false) {
     for (const f of fx) {
       if (f.type === 'send') {
         const text = JSON.stringify(f.msg);
-        if (direct && f.token === directToken) {
+        const rehearsal = !!f.rehearsal;
+        if (direct && f.token === directToken && rehearsal === directRehearsal) {
           try { direct.send(text); } catch { /* the window went away */ }
           continue;
         }
-        for (const ws of this.ctx.getWebSockets(f.token)) {
+        for (const ws of this.ctx.getWebSockets(rehearsal ? 'r:' + f.token : f.token)) {
           try { ws.send(text); } catch { /* the window went away */ }
         }
       } else if (f.type === 'close') {

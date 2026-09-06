@@ -1,40 +1,78 @@
 // The lobby, as a pure state machine. No Cloudflare imports, no clock, no randomness of its own.
 // The Durable Object wraps it; the mock lobby and the tests drive it directly.
-// Every event carries `now` (ms). apply() returns a list of effects:
-//   {type:'reply', body}                        answer to the HTTP request that caused the event
-//   {type:'send', token, msg}                   a WebSocket frame to that token's window
-//   {type:'close', token}                       close that token's socket (after any sends)
-//   {type:'attach', ok, token, rehearsal, conn} result of a ws_open: which token and connection id
+// Every event carries `now` (ms, server clock). apply() returns a list of effects:
+//   {type:'reply', body}                             answer to the HTTP request that caused the event
+//   {type:'send', token, msg, rehearsal?}            a WebSocket frame to that token's window (or its rehearsal window)
+//   {type:'close', token}                            close that token's socket (after any sends)
+//   {type:'attach', ok, token, rehearsal, conn}      result of a ws_open: which token and connection id
 // Socket events (ws_msg, ws_close) carry the `conn` from attach so a late callback from an old
-// socket can never touch its replacement. See docs/PROTOCOL.md for the words.
+// socket can never touch its replacement. Hook events carry the plugin's own `ts` and a hashed
+// `session`, because hooks are async and can arrive out of order, and one machine can run several
+// Claude sessions at once. nextDeadline(now) tells the wrapper when the next sweep is due.
+// See docs/PROTOCOL.md for the words.
 
 export const DEFAULTS = {
   T: 15_000, F: 20_000, N: 90_000, G: 90_000, P: 600_000, Q: 45_000,
   COUNTDOWN: 5, ROOM_MAX: 1_800_000, PEER_COOLDOWN: 60_000, OPEN_RETRY: 30_000,
-  TICKET_TTL: 600_000, MAX_OPENS: 2,
-  REPORT_BLOCK: 3, BLOCK_MS: 86_400_000, PROBES_KEPT: 20,
+  TICKET_TTL: 600_000, MAX_OPENS: 2, RECONNECT_GRACE: 15_000,
+  REPORT_BLOCK: 3, BLOCK_MS: 86_400_000, PROBES_KEPT: 20, PROBE_BYTES: 2048,
+  TOKEN_TTL: 30 * 86_400_000,
   invites: [],
   iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }],
 };
 
+export const STATE_VERSION = 2;
 const TOKEN_RE = /^[a-z0-9]{8,64}$/;
-const own = (obj, key) => (typeof key === 'string' && Object.hasOwn(obj, key) ? obj[key] : undefined);
+const EVENTS = { started: 'run', tick: 'run', needs_you: 'pause', paused: 'pause', stopped: 'stop' };
+const own = (obj, key) => (obj && typeof key === 'string' && Object.hasOwn(obj, key) ? obj[key] : undefined);
 
 export function emptyState() {
-  return { tokens: {}, rooms: {}, tickets: {}, seq: 0 };
+  return { v: STATE_VERSION, tokens: {}, rooms: {}, tickets: {}, seq: 0 };
+}
+
+/** Fill in fields an older snapshot lacks. A newer snapshot keeps its extra fields. */
+export function hydrate(state) {
+  const s = state && typeof state === 'object' ? state : emptyState();
+  s.v = STATE_VERSION;
+  s.tokens = s.tokens || {}; s.rooms = s.rooms || {}; s.tickets = s.tickets || {}; s.seq = s.seq || 0;
+  for (const t of Object.values(s.tokens)) {
+    t.lastPeers = t.lastPeers && !Array.isArray(t.lastPeers) ? t.lastPeers : {};
+    t.reports = t.reports && !Array.isArray(t.reports) ? t.reports : {};
+    t.probes = Array.isArray(t.probes) ? t.probes : [];
+    t.blockedUntil = t.blockedUntil || 0;
+    t.lastHookAt = t.lastHookAt || 0;
+    t.registeredAt = t.registeredAt || 0;
+    t.rehearse = !!t.rehearse;
+    if (t.task) {
+      const k = t.task;
+      k.everConnected = !!k.everConnected; k.optedOut = !!k.optedOut; k.opens = k.opens || 0; k.lastOpenAt = k.lastOpenAt || 0;
+      k.sessions = k.sessions && typeof k.sessions === 'object' ? k.sessions : {};
+      k.lastTs = k.lastTs || 0; k.endedTs = k.endedTs || 0;
+    }
+    if (t.win) { t.win.disconnectedAt = t.win.disconnectedAt || 0; t.win.connected = !!t.win.connected; }
+  }
+  for (const r of Object.values(s.rooms)) {
+    r.speaking = r.speaking || {}; r.video = r.video || {}; r.videoLined = !!r.videoLined; r.closing = r.closing || null;
+    r.lastSpeechAt = r.lastSpeechAt || r.createdAt || 0;
+  }
+  return s;
 }
 
 export class Lobby {
   /** @param {object} cfg overrides for DEFAULTS  @param {object|null} state a previous snapshot  @param {() => string} rand id source */
   constructor(cfg = {}, state = null, rand = defaultRand) {
     this.cfg = { ...DEFAULTS, ...cfg };
-    this.s = state || emptyState();
+    this.s = hydrate(state || emptyState());
     this.rand = rand;
+    this.now = 0;
   }
 
   apply(ev) {
     this.fx = [];
     const now = ev.now;
+    this.now = now;
+    // Time passes first: a deadline that already went by is applied before the new event is read.
+    this.sweep(now);
     switch (ev.kind) {
       case 'register': this.register(ev); break;
       case 'off': this.off(ev); break;
@@ -56,14 +94,14 @@ export class Lobby {
 
   // ---------- effects ----------
   reply(body) { this.fx.push({ type: 'reply', body }); }
-  send(token, msg) { this.fx.push({ type: 'send', token, msg }); }
+  send(token, msg, rehearsal = false) { this.fx.push(rehearsal ? { type: 'send', token, rehearsal: true, msg } : { type: 'send', token, msg }); }
   line(token, key, who = 'sys', extra = {}) { this.send(token, { type: 'line', key, who, ...extra }); }
   closeSocket(token) { this.fx.push({ type: 'close', token }); }
-  /** Server-initiated close: say why, forget the window, then drop the socket. */
+  /** Server-initiated close: say why, forget the window and its ticket, then drop the socket. */
   closeWindow(token, reason) {
     const t = this.tok(token);
     this.send(token, { type: 'close', reason });
-    if (t) t.win = null;
+    if (t && t.win) { delete this.s.tickets[t.win.ticket]; t.win = null; }
     this.closeSocket(token);
   }
 
@@ -73,17 +111,17 @@ export class Lobby {
     const known = this.tok(token);
     const open = this.cfg.invites.length === 0;
     if (!known && !open && !this.cfg.invites.includes(invite)) return this.reply({ ok: false, error: 'invite' });
-    const t = known || this.newToken();
+    const t = known || this.newToken(now);
     t.enabled = true;
-    t.invite = invite || t.invite || null;
-    t.registeredAt = t.registeredAt || now;
+    t.invite = typeof invite === 'string' && invite ? invite.slice(0, 64) : t.invite || null;
+    t.lastHookAt = now;
     this.s.tokens[token] = t;
     this.reply({ ok: true, count: this.othersFor(token), setup: origin + '/setup?t=' + token });
   }
 
-  newToken() {
-    return { enabled: false, invite: null, lastHookAt: 0, task: null, win: null, room: null,
-      lastPeers: {}, rehearse: false, reports: [], blockedUntil: 0, probes: [] };
+  newToken(now) {
+    return { enabled: false, invite: null, registeredAt: now, lastHookAt: now, task: null, win: null, room: null,
+      lastPeers: {}, rehearse: false, reports: {}, blockedUntil: 0, probes: [] };
   }
 
   off({ token, now }) {
@@ -93,7 +131,8 @@ export class Lobby {
     t.rehearse = false;
     if (t.room) this.leaveRoom(token, now, 'off');
     else if (this.live(t)) this.closeWindow(token, 'off');
-    if (t.task) this.dropTickets(token);
+    t.win = null;
+    this.dropTickets(token);
     t.task = null;
     this.reply({ ok: true });
   }
@@ -106,41 +145,54 @@ export class Lobby {
   }
 
   // ---------- hooks ----------
-  hook({ token, event, why, now, origin = '' }) {
+  hook({ token, event, why, session, ts, now, origin = '' }) {
+    const kind = own(EVENTS, event);
     const t = this.tok(token);
-    if (!t || !t.enabled) return this.reply({});
+    if (!kind || !t || !t.enabled) return this.reply({});
     t.lastHookAt = now;
-    if (t.blockedUntil > now) return this.reply({});
-    let task = t.task;
-    if (event === 'stopped') {
-      if (task && task.phase !== 'done') this.endTask(token, now, 'done');
-    } else {
-      if (!task || task.phase === 'done') {
-        if (event === 'paused') return this.finishHook(t, token, now, origin);
-        task = t.task = this.newTask(now);
-      }
-      task.lastSignalAt = now;
-      if (event === 'started' || event === 'tick') {
-        if (task.phase === 'paused') {
-          task.phase = 'armed';
-          task.pausedAt = 0;
-          if (t.room) this.pairLines(token, 'back');
-        }
-      } else if (event === 'needs_you' || event === 'paused') {
-        const wasPaused = task.phase === 'paused';
-        task.phase = 'paused';
-        task.pausedAt = now;
-        task.pauseKind = event === 'needs_you' ? 'needs_you' : (why === 'bg' ? 'bg' : 'question');
-        if (!wasPaused && t.room) this.pairLines(token, 'brb');
-      }
-      this.promote(task, now);
+    if (t.blockedUntil > now) {
+      if (t.task && t.task.phase !== 'done') this.endTask(token, now, 'done', now);
+      return this.reply({});
     }
+    const at = Number.isFinite(ts) ? ts : now;
+    const sid = typeof session === 'string' && session ? session.slice(0, 32) : 'one';
+    let task = t.task;
+    if (kind === 'stop') {
+      if (task && task.phase !== 'done' && at >= task.lastTs) {
+        delete task.sessions[sid];
+        if (Object.keys(task.sessions).length === 0) this.endTask(token, now, 'done', at);
+        else { task.lastSignalAt = now; task.lastTs = at; }
+      }
+      return this.finishHook(t, token, now, origin);
+    }
+    if (!task || task.phase === 'done') {
+      if (task && task.phase === 'done' && at < task.endedTs) return this.finishHook(t, token, now, origin);
+      if (event === 'paused') return this.finishHook(t, token, now, origin);
+      task = t.task = this.newTask(now, at);
+    }
+    task.sessions[sid] = now;
+    task.lastSignalAt = now;
+    task.lastTs = Math.max(task.lastTs, at);
+    if (kind === 'run') {
+      if (task.phase === 'paused') {
+        task.phase = 'armed';
+        task.pausedAt = 0;
+        if (t.room) this.pairLines(token, 'back');
+      }
+    } else {
+      const wasPaused = task.phase === 'paused';
+      task.phase = 'paused';
+      task.pausedAt = now;
+      task.pauseKind = event === 'needs_you' ? 'needs_you' : (why === 'bg' ? 'bg' : 'question');
+      if (!wasPaused && t.room) this.pairLines(token, 'brb');
+    }
+    this.promote(task, now);
     this.finishHook(t, token, now, origin);
   }
 
   finishHook(t, token, now, origin) {
-    const liveWindow = this.live(t);
-    if (t.rehearse && !liveWindow) {
+    const hasWindow = !!t.win;
+    if (t.rehearse && !hasWindow) {
       t.rehearse = false;
       const ticket = this.makeTicket(token, now, true, null);
       return this.reply({ open: origin + '/room?t=' + ticket });
@@ -148,7 +200,7 @@ export class Lobby {
     const task = t.task;
     const pastT = task && now - task.startedAt >= this.cfg.T;
     const eligible = pastT && task.phase !== 'done' && !task.optedOut;
-    const canOpen = eligible && !liveWindow &&
+    const canOpen = eligible && !hasWindow &&
       (task.opens === 0 || (!task.everConnected && task.opens < this.cfg.MAX_OPENS && now - task.lastOpenAt > this.cfg.OPEN_RETRY));
     if (canOpen) {
       task.opens += 1;
@@ -159,10 +211,10 @@ export class Lobby {
     this.reply({});
   }
 
-  newTask(now) {
+  newTask(now, ts) {
     this.s.seq += 1;
-    return { id: this.s.seq, startedAt: now, lastSignalAt: now, phase: 'armed', pausedAt: 0, pauseKind: null,
-      opens: 0, lastOpenAt: 0, everConnected: false, optedOut: false };
+    return { id: this.s.seq, startedAt: now, lastSignalAt: now, lastTs: ts, endedTs: 0, phase: 'armed', pausedAt: 0, pauseKind: null,
+      opens: 0, lastOpenAt: 0, everConnected: false, optedOut: false, sessions: {} };
   }
 
   promote(task, now) {
@@ -177,12 +229,14 @@ export class Lobby {
   }
 
   // ---------- task end ----------
-  endTask(token, now, reason) {
+  endTask(token, now, reason, ts = now) {
     const t = this.tok(token);
     const task = t.task;
     task.phase = 'done';
     task.pausedAt = 0;
-    this.dropTickets(token);
+    task.endedTs = Math.max(task.endedTs, ts);
+    task.sessions = {};
+    this.dropTickets(token, t.win?.ticket);
     if (t.room) {
       const room = this.s.rooms[t.room];
       if (reason === 'done') {
@@ -192,28 +246,34 @@ export class Lobby {
       }
       return;
     }
-    if (this.live(t)) this.closeWindow(token, reason === 'quiet' ? 'quiet' : 'done');
+    if (t.win) this.closeWindow(token, reason === 'quiet' ? 'quiet' : 'done');
   }
 
   startClosing(room, by, now) {
-    const peer = room.a === by ? room.b : room.a;
+    const peer = peerIn(room, by);
     room.closing = { by, startedAt: now, n: this.cfg.COUNTDOWN };
     for (const tk of [by, peer]) this.send(tk, { type: 'state', state: 'closing' });
-    this.send(by, { type: 'countdown', n: this.cfg.COUNTDOWN, mine: true, reason: 'done' });
-    this.send(peer, { type: 'countdown', n: this.cfg.COUNTDOWN, mine: false, reason: 'done' });
+    this.countdown(room, this.cfg.COUNTDOWN);
+  }
+
+  countdown(room, n) {
+    const by = room.closing.by;
+    this.send(by, { type: 'countdown', n, mine: true, reason: 'done' });
+    this.send(peerIn(room, by), { type: 'countdown', n, mine: false, reason: 'done' });
   }
 
   /** The goodbye is over. Whoever still has a running task keeps the window and shades. */
   finishClosing(room, now) {
     const by = room.closing.by;
-    const peer = room.a === by ? room.b : room.a;
+    const peer = peerIn(room, by);
     this.dissolve(room, now);
     for (const tk of [by, peer]) {
       const t = this.tok(tk);
-      if (!this.live(t)) continue;
+      if (!t.win) continue;
       const cur = t.task;
       if (cur && cur.phase !== 'done') {
         if (tk === peer) this.line(tk, 'left');
+        this.adoptWindow(t, cur);
         this.requeue(tk);
       } else {
         this.closeWindow(tk, 'done');
@@ -221,24 +281,43 @@ export class Lobby {
     }
   }
 
+  /** A window that outlived its task now belongs to the token's new task. */
+  adoptWindow(t, task) {
+    const tk = own(this.s.tickets, t.win.ticket);
+    if (tk && tk.taskId !== task.id) tk.taskId = task.id;
+    if (task.opens === 0) { task.opens = 1; task.lastOpenAt = this.now; }
+    task.everConnected = true;
+  }
+
   /** One side leaves now: hangup, report, manual close, quiet Claude, off, dropped. The peer shades. */
   leaveRoom(token, now, reason) {
     const t = this.tok(token);
-    const room = this.s.rooms[t.room];
-    if (!room) return;
-    const peer = room.a === token ? room.b : room.a;
+    const room = t.room ? own(this.s.rooms, t.room) : null;
+    if (!room) { t.room = null; return; }
+    const peer = peerIn(room, token);
     this.dissolve(room, now);
     if (t.task) t.task.optedOut = t.task.optedOut || reason === 'hangup' || reason === 'report' || reason === 'manual';
     if (this.live(t)) {
       if (reason === 'report') this.line(token, 'reported');
-      const r = reason === 'report' ? 'hangup' : reason;
-      this.closeWindow(token, r);
+      this.closeWindow(token, reason === 'report' ? 'hangup' : reason);
+    } else if (t.win && reason !== 'dropped') {
+      t.win = null;
     }
-    const pt = this.tok(peer);
-    if (this.live(pt)) {
-      this.line(peer, 'left');
-      if (pt.task && pt.task.phase !== 'done') this.requeue(peer);
-      else this.closeWindow(peer, 'done');
+    this.settle(peer, now);
+  }
+
+  /** After a room ends for the other side: shade if their Claude still works, close if not or if blocked. */
+  settle(token, now) {
+    const t = this.tok(token);
+    if (!t.win) return;
+    this.line(token, 'left');
+    if (t.blockedUntil > now) {
+      if (t.task && t.task.phase !== 'done') { t.task.phase = 'done'; t.task.sessions = {}; }
+      this.closeWindow(token, 'done');
+    } else if (t.task && t.task.phase !== 'done') {
+      this.requeue(token);
+    } else {
+      this.closeWindow(token, 'done');
     }
   }
 
@@ -248,7 +327,7 @@ export class Lobby {
     this.dissolve(room, now);
     for (const tk of [a, b]) {
       const t = this.tok(tk);
-      if (!this.live(t)) continue;
+      if (!t.win) continue;
       this.line(tk, key);
       this.requeue(tk);
     }
@@ -259,8 +338,7 @@ export class Lobby {
       const t = this.tok(tk);
       if (!t) continue;
       t.room = null;
-      const other = tk === room.a ? room.b : room.a;
-      t.lastPeers[other] = now;
+      t.lastPeers[peerIn(room, tk)] = now;
       for (const [p, at] of Object.entries(t.lastPeers)) if (now - at > this.cfg.PEER_COOLDOWN) delete t.lastPeers[p];
     }
     delete this.s.rooms[room.id];
@@ -278,8 +356,10 @@ export class Lobby {
     return id;
   }
 
-  dropTickets(token) {
-    for (const [id, tk] of Object.entries(this.s.tickets)) if (tk.token === token && !tk.rehearsal) delete this.s.tickets[id];
+  dropTickets(token, keep = null) {
+    for (const [id, tk] of Object.entries(this.s.tickets)) {
+      if (tk.token === token && !tk.rehearsal && id !== keep) delete this.s.tickets[id];
+    }
   }
 
   wsOpen({ ticket, now }) {
@@ -292,14 +372,15 @@ export class Lobby {
     if (tk.rehearsal) {
       delete this.s.tickets[ticket];
       this.fx.push({ type: 'attach', ok: true, token, rehearsal: true, conn });
-      this.send(token, { type: 'hello', others: this.othersFor(token), state: 'shaded', rehearsal: true, cfg: this.clientCfg() });
-      this.line(token, 'rehearsal');
+      this.send(token, { type: 'hello', others: this.othersFor(token), state: 'shaded', rehearsal: true, cfg: this.clientCfg() }, true);
+      this.send(token, { type: 'line', key: 'rehearsal', who: 'sys' }, true);
       return;
     }
     const task = t.task;
     const valid = task && task.id === tk.taskId && task.phase !== 'done' && !task.optedOut && t.blockedUntil <= now;
     if (!valid || this.live(t)) return this.fx.push({ type: 'attach', ok: false });
-    t.win = { connected: true, since: now, ticket, conn, bye: null, lastOthers: null };
+    t.win = { connected: true, since: now, ticket, conn, bye: null, lastOthers: null, disconnectedAt: 0 };
+    tk.exp = now + this.cfg.ROOM_MAX + this.cfg.TICKET_TTL;
     task.everConnected = true;
     this.fx.push({ type: 'attach', ok: true, token, rehearsal: false, conn });
     this.send(token, { type: 'hello', others: this.othersFor(token), state: t.room ? 'room' : 'shaded', rehearsal: false, cfg: this.clientCfg() });
@@ -315,17 +396,22 @@ export class Lobby {
     if (rehearsal) return;
     const t = this.tok(token);
     if (!t || !this.current(t, conn)) return;
-    const manual = t.win.bye === 'manual';
-    t.win = null;
-    if (t.room) this.leaveRoom(token, now, manual ? 'manual' : 'dropped');
-    else if (manual && t.task) t.task.optedOut = true;
+    if (t.win.bye === 'manual') {
+      t.win = null;
+      if (t.room) this.leaveRoom(token, now, 'manual');
+      else if (t.task) t.task.optedOut = true;
+      return;
+    }
+    // A drop. Keep the window record and the room for a short grace; the page reconnects with its ticket.
+    t.win.connected = false;
+    t.win.disconnectedAt = now;
   }
 
   wsMsg({ token, conn, msg, now }) {
     const t = this.tok(token);
     if (!t || !this.current(t, conn) || !msg || typeof msg !== 'object') return;
     const peer = this.peerOf(token);
-    const room = t.room ? this.s.rooms[t.room] : null;
+    const room = t.room ? own(this.s.rooms, t.room) : null;
     switch (msg.type) {
       case 'signal':
         if (room && peer && msg.room === room.id) this.send(peer, { type: 'signal', room: room.id, data: msg.data });
@@ -339,7 +425,7 @@ export class Lobby {
         if (!room) break;
         room.video[token] = !!msg.on;
         if (peer) this.send(peer, { type: 'peer', video: !!msg.on });
-        if (room.video[room.a] && room.video[room.b] && !room.videoLined) {
+        if (own(room.video, room.a) && own(room.video, room.b) && !room.videoLined) {
           room.videoLined = true;
           this.line(room.a, 'video_on');
           this.line(room.b, 'video_on');
@@ -350,33 +436,58 @@ export class Lobby {
         else { if (t.task) t.task.optedOut = true; this.closeWindow(token, 'hangup'); }
         break;
       case 'report':
-        if (peer) {
-          const p = this.tok(peer);
-          p.reports = p.reports.filter((at) => now - at < this.cfg.BLOCK_MS);
-          p.reports.push(now);
-          if (p.reports.length >= this.cfg.REPORT_BLOCK) p.blockedUntil = now + this.cfg.BLOCK_MS;
-        }
-        if (room) this.leaveRoom(token, now, 'report');
-        else { if (t.task) t.task.optedOut = true; this.closeWindow(token, 'hangup'); }
+        this.report(token, peer, room, now);
         break;
       case 'bye':
         t.win.bye = msg.reason === 'manual' ? 'manual' : null;
         break;
-      case 'probe':
+      case 'probe': {
+        let size = 0;
+        try { size = JSON.stringify(msg.data ?? null).length; } catch { break; }
+        if (size > this.cfg.PROBE_BYTES) break;
         t.probes.push({ at: now, data: msg.data });
         if (t.probes.length > this.cfg.PROBES_KEPT) t.probes.shift();
         break;
+      }
       default:
         break;
     }
   }
 
-  // ---------- sweep and pairing ----------
+  /** Flag the peer (one flag per reporter per day). In a room this is also a hang-up; alone, the last peer is flagged. */
+  report(token, peer, room, now) {
+    const target = peer || this.recentPeer(token, now);
+    if (target) {
+      const p = this.tok(target);
+      for (const [who, at] of Object.entries(p.reports)) if (now - at >= this.cfg.BLOCK_MS) delete p.reports[who];
+      p.reports[token] = now;
+      if (Object.keys(p.reports).length >= this.cfg.REPORT_BLOCK) p.blockedUntil = now + this.cfg.BLOCK_MS;
+    }
+    if (room) return this.leaveRoom(token, now, 'report');
+    if (target) this.line(token, 'reported');
+  }
+
+  recentPeer(token, now) {
+    const t = this.tok(token);
+    let best = null, at = 0;
+    for (const [p, when] of Object.entries(t.lastPeers)) if (now - when < this.cfg.PEER_COOLDOWN && when > at) { best = p; at = when; }
+    return best;
+  }
+
+  // ---------- sweep, deadlines, pairing ----------
   sweep(now) {
     const c = this.cfg;
     for (const [token, t] of Object.entries(this.s.tokens)) {
+      if (t.win && !t.win.connected && now - t.win.disconnectedAt > c.RECONNECT_GRACE) {
+        t.win = null;
+        if (t.room) this.leaveRoom(token, now, 'dropped');
+      }
       const task = t.task;
-      if (!task || task.phase === 'done') continue;
+      if (!task || task.phase === 'done') {
+        if (!t.win && !t.room && now - t.lastHookAt > c.TOKEN_TTL) delete this.s.tokens[token];
+        continue;
+      }
+      for (const [sid, at] of Object.entries(task.sessions)) if (now - at > c.N) delete task.sessions[sid];
       this.promote(task, now);
       if (task.phase === 'paused') {
         const limit = task.pauseKind === 'question' ? c.G : c.P;
@@ -389,20 +500,41 @@ export class Lobby {
       if (room.closing) {
         const n = c.COUNTDOWN - Math.floor((now - room.closing.startedAt) / 1000);
         if (n <= 0) { this.finishClosing(room, now); continue; }
-        if (n !== room.closing.n) {
-          room.closing.n = n;
-          const by = room.closing.by;
-          const peer = room.a === by ? room.b : room.a;
-          this.send(by, { type: 'countdown', n, mine: true, reason: 'done' });
-          this.send(peer, { type: 'countdown', n, mine: false, reason: 'done' });
-        }
+        if (n !== room.closing.n) { room.closing.n = n; this.countdown(room, n); }
         continue;
       }
-      const anySpeaking = room.speaking[room.a] || room.speaking[room.b];
       if (now - room.createdAt > c.ROOM_MAX) this.endRoomSoft(room, now, 'time_up');
-      else if (!anySpeaking && now - room.lastSpeechAt > c.Q) this.endRoomSoft(room, now, 'quiet_room');
+      else if (!this.anySpeaking(room, now) && now - room.lastSpeechAt > c.Q) this.endRoomSoft(room, now, 'quiet_room');
     }
     for (const [id, tk] of Object.entries(this.s.tickets)) if (tk.exp < now) delete this.s.tickets[id];
+  }
+
+  /** A "speaking" flag counts only while speech frames keep coming; a stale flag is silence. */
+  anySpeaking(room, now) {
+    const flag = own(room.speaking, room.a) || own(room.speaking, room.b);
+    return !!flag && now - room.lastSpeechAt <= this.cfg.Q;
+  }
+
+  /** When the next sweep must run, or null when nothing is pending. */
+  nextDeadline(now) {
+    const c = this.cfg;
+    let next = Infinity;
+    const at = (x) => { if (x < next) next = x; };
+    for (const t of Object.values(this.s.tokens)) {
+      if (t.win && !t.win.connected) at(t.win.disconnectedAt + c.RECONNECT_GRACE);
+      const task = t.task;
+      if (!task || task.phase === 'done') continue;
+      if (task.phase === 'armed') at(task.startedAt + c.T);
+      if (task.phase === 'paused') at(task.pausedAt + (task.pauseKind === 'question' ? c.G : c.P));
+      else at(task.lastSignalAt + c.N);
+    }
+    for (const room of Object.values(this.s.rooms)) {
+      if (room.closing) { at(room.closing.startedAt + (c.COUNTDOWN - room.closing.n + 1) * 1000); continue; }
+      at(room.createdAt + c.ROOM_MAX);
+      at(room.lastSpeechAt + c.Q);
+    }
+    if (next === Infinity) return null;
+    return Math.max(next, now + 250);
   }
 
   candidates(now) {
@@ -426,8 +558,7 @@ export class Lobby {
       if (used.has(a)) continue;
       for (let j = i + 1; j < cands.length; j++) {
         const b = cands[j];
-        if (used.has(b)) continue;
-        if (this.tooSoon(a, b, now)) continue;
+        if (used.has(b) || this.tooSoon(a, b, now)) continue;
         used.add(a); used.add(b);
         this.makeRoom(a, b, now);
         break;
@@ -436,8 +567,7 @@ export class Lobby {
   }
 
   tooSoon(a, b, now) {
-    const ab = this.tok(a).lastPeers[b], ba = this.tok(b).lastPeers[a];
-    const last = Math.max(ab || 0, ba || 0);
+    const last = Math.max(own(this.tok(a).lastPeers, b) || 0, own(this.tok(b).lastPeers, a) || 0);
     return last > 0 && now - last < this.cfg.PEER_COOLDOWN;
   }
 
@@ -458,8 +588,9 @@ export class Lobby {
   }
 
   // ---------- counts ----------
-  /** People whose Claude is working, with a live shaded window, not in a room, not paused, not blocked. */
-  waiting(now = 0) {
+  /** People whose Claude is working: a live shaded window, a task that runs, not paused, not in a room, not blocked. */
+  waiting() {
+    const now = this.now;
     const out = [];
     for (const [token, t] of Object.entries(this.s.tokens)) {
       const task = t.task;
@@ -473,9 +604,11 @@ export class Lobby {
   othersFor(token) { const w = this.waiting(); return w.length - (w.includes(token) ? 1 : 0); }
 
   broadcastOthers() {
+    const w = this.waiting();
+    const set = new Set(w);
     for (const [token, t] of Object.entries(this.s.tokens)) {
       if (!this.live(t)) continue;
-      const n = this.othersFor(token);
+      const n = w.length - (set.has(token) ? 1 : 0);
       if (t.win.lastOthers !== n) {
         t.win.lastOthers = n;
         this.send(token, { type: 'others', n });
@@ -489,11 +622,12 @@ export class Lobby {
   peerOf(token) {
     const t = this.tok(token);
     if (!t || !t.room) return null;
-    const room = this.s.rooms[t.room];
-    if (!room) return null;
-    return room.a === token ? room.b : room.a;
+    const room = own(this.s.rooms, t.room);
+    return room ? peerIn(room, token) : null;
   }
 }
+
+function peerIn(room, token) { return room.a === token ? room.b : room.a; }
 
 function defaultRand() {
   const a = new Uint8Array(12);

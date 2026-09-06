@@ -1,0 +1,18 @@
+{
+  "name": "waiting-room",
+  "owner": { "name": "David Yang", "url": "https://github.com/Dav1dyang" },
+  "description": "One plugin: waiting-room. A call with a stranger while your Claude works.",
+  "plugins": [
+    {
+      "name": "waiting-room",
+      "source": "./plugin",
+      "description": "While your Claude works, a small window opens and puts you on a call with a stranger whose Claude is also working. It closes when either Claude finishes. Nothing about your task is ever shared.",
+      "version": "0.3.0",
+      "author": { "name": "David Yang" },
+      "homepage": "https://github.com/Dav1dyang/waiting-room",
+      "repository": "https://github.com/Dav1dyang/waiting-room",
+      "keywords": ["hooks", "webrtc", "waiting", "fun", "social"],
+      "category": "fun"
+    }
+  ]
+}

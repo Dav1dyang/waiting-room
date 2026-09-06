@@ -39,6 +39,5 @@
     "MAX_OPENS": 2,          // opens per task, counting the retry
     "RECONNECT_GRACE": 15000,// a dropped window may come back inside this window
     "RELAY_BUDGET_GB": 500,  // stop minting TURN credentials past this monthly estimate
-    "INVITES": ""            // comma separated codes, empty means open; the real list is a secret
   }
 }
