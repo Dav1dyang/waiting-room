@@ -41,6 +41,8 @@ export const UI = {
   sounds: 'Sounds',
   mute: 'Mute',
   live: 'live',
+  stale: 'This window is stale.',
+  canClose: 'You can close this window.',
 };
 
 /** The setup page, top to bottom. */
@@ -63,6 +65,7 @@ export const SETUP = {
   rules: 'The rules. Audio first, video only when you both click. Nothing about your task is shared, ever. Nothing is recorded. Rooms end after 30 minutes. Be kind; Report is one click.',
   nobody: 'Nobody else is waiting right now. That is normal.',
   done: 'Done',
+  closeTab: 'You can close this tab.',
   badToken: 'This setup link is not valid. Run /waiting-room:on in Claude Code to get a fresh one.',
 };
 

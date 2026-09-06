@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waiting Room</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="win" id="win" data-shaded="1">
+
+  <div class="tb" id="tb">
+    <div class="stripes"></div>
+    <button class="door" id="door" type="button" title="Close"><i data-icon="door"></i></button>
+    <span class="title" id="title">Waiting Room</span>
+    <button class="box shadebox" id="shadebox" type="button" title="Shade"><i data-icon="shade"></i></button>
+    <button class="box zoom" id="zoom" type="button" title="Zoom"></button>
+  </div>
+
+  <div class="topic" id="topic">
+    <i data-icon="watch" id="lead"></i>
+    <span class="dot" id="mark"></span>
+    <span class="text" id="countText"></span>
+  </div>
+
+  <div class="body">
+
+    <div class="stage" id="stage">
+      <div class="feed">
+        <video id="localVideo" autoplay playsinline muted disablepictureinpicture></video>
+        <span class="cap"><i data-icon="camera"></i>YOU</span>
+      </div>
+      <div class="feed">
+        <video id="remoteVideo" autoplay playsinline muted disablepictureinpicture></video>
+        <span class="cap"><i data-icon="camera"></i>STRANGER</span>
+      </div>
+    </div>
+
+    <div class="log" id="log">
+      <div id="lines"></div>
+      <div class="big" id="big" hidden></div>
+      <div class="sb"><span class="up"></span><span class="thumb" id="thumb"></span><span class="dn"></span></div>
+    </div>
+
+    <div class="status">
+      <span>YOU <span class="meter" id="meterYou"></span></span>
+      <span>STRANGER <span class="meter" id="meterThem"></span></span>
+    </div>
+
+  </div>
+
+  <div class="ctl">
+    <button class="btn blush" id="hangup" type="button">Hang up</button>
+    <button class="btn cyan" id="videoBtn" type="button">Show video</button>
+    <button class="btn" id="report" type="button">Report</button>
+    <button class="snd" id="sounds" type="button"><i data-icon="speaker" id="soundIcon"></i>Sounds</button>
+  </div>
+
+</div>
+
+<audio id="remoteAudio" autoplay playsinline></audio>
+
+<script type="module" src="room.js"></script>
+</body>
+</html>

@@ -12,7 +12,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(here, '..', 'public');
 const PORT = Number(process.env.PORT || 8788);
 const cfg = {};
-for (const k of ['T', 'F', 'N', 'G', 'P', 'Q', 'ROOM_MAX', 'PEER_COOLDOWN', 'OPEN_RETRY', 'COUNTDOWN']) if (process.env[k]) cfg[k] = Number(process.env[k]);
+for (const k of ['T', 'F', 'N', 'G', 'P', 'Q', 'ROOM_MAX', 'PEER_COOLDOWN', 'OPEN_RETRY', 'COUNTDOWN', 'RECONNECT_GRACE']) {
+  const n = Number(process.env[k]);
+  if (process.env[k] && Number.isFinite(n)) cfg[k] = n;
+}
 cfg.invites = (process.env.INVITES || '').split(',').map((s) => s.trim()).filter(Boolean);
 const lobby = new Lobby(cfg);
 const sockets = new Map(); // token -> ws
@@ -21,7 +24,7 @@ function runEffects(fx, res) {
   let reply = null;
   for (const f of fx) {
     if (f.type === 'reply') reply = f.body;
-    else if (f.type === 'send') sockets.get(f.token)?.send(JSON.stringify(f.msg));
+    else if (f.type === 'send') sockets.get(f.rehearsal ? f.token + '#r' : f.token)?.send(JSON.stringify(f.msg));
     else if (f.type === 'close') { const w = sockets.get(f.token); sockets.delete(f.token); w?.close(1000, 'bye'); }
   }
   if (res) { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(reply ?? {})); }
@@ -34,10 +37,14 @@ function serveStatic(pathname, res) {
   const full = path.join(PUBLIC, path.normalize(file));
   if (!full.startsWith(PUBLIC) || !fs.existsSync(full) || fs.statSync(full).isDirectory()) { res.writeHead(404); return res.end('not found'); }
   res.writeHead(200, { 'content-type': MIME[path.extname(full)] || 'application/octet-stream' });
-  fs.createReadStream(full).pipe(res);
+  fs.createReadStream(full).on('error', () => { try { res.destroy(); } catch { /* gone */ } }).pipe(res);
 }
 
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
+  handle(req, res).catch((err) => { console.error('request failed:', err.message); try { res.writeHead(500); res.end('{}'); } catch { /* gone */ } });
+});
+
+async function handle(req, res) {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
   const origin = `http://127.0.0.1:${PORT}`;
   const now = Date.now();
@@ -48,14 +55,14 @@ const server = http.createServer(async (req, res) => {
     try { j = JSON.parse(body || '{}'); } catch { res.writeHead(400); return res.end('{}'); }
     const kind = { '/api/register': 'register', '/api/hook': 'hook', '/api/off': 'off', '/api/rehearse': 'rehearse' }[url.pathname];
     if (!kind) { res.writeHead(404); return res.end('{}'); }
-    return runEffects(lobby.apply({ kind, ...j, now, origin }), res);
+    return runEffects(lobby.apply({ ...j, kind, now, origin }), res);
   }
   if (req.method === 'GET' && url.pathname === '/api/count') return runEffects(lobby.apply({ kind: 'count', token: url.searchParams.get('t'), now }), res);
   if (req.method === 'GET' && url.pathname === '/api/probes') return runEffects(lobby.apply({ kind: 'probes', token: url.searchParams.get('t'), now }), res);
   if (req.method === 'GET' && url.pathname === '/api/state') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(lobby.s)); }
   if (req.method === 'GET') return serveStatic(url.pathname, res);
   res.writeHead(405); res.end();
-});
+}
 
 const wss = new WebSocketServer({ noServer: true });
 server.on('upgrade', (req, socket, head) => {
@@ -64,12 +71,18 @@ server.on('upgrade', (req, socket, head) => {
   wss.handleUpgrade(req, socket, head, (ws) => {
     const fx = lobby.apply({ kind: 'ws_open', ticket: url.searchParams.get('t'), now: Date.now() });
     const attach = fx.find((f) => f.type === 'attach');
-    if (!attach?.ok) { ws.close(4001, 'bad ticket'); return; }
+    if (!attach?.ok) {
+      // The core still swept on this event; deliver whatever it decided for other windows.
+      runEffects(fx);
+      ws.close(4001, 'bad ticket');
+      return;
+    }
     const { token, rehearsal, conn } = attach;
-    if (!rehearsal) sockets.set(token, ws); else sockets.set(token + '#r', ws);
     const key = rehearsal ? token + '#r' : token;
-    // deliver this open's own effects (hello and friends) now that the socket is registered
-    for (const f of fx) if (f.type === 'send' && f.token === token) ws.send(JSON.stringify(f.msg));
+    sockets.set(key, ws);
+    // Deliver this open's effects now that the socket is registered. A ws_open can pair two
+    // people, so frames for the other token are in this batch too; rehearsal frames carry a flag.
+    runEffects(fx);
     ws.on('message', (data) => {
       let msg; try { msg = JSON.parse(String(data)); } catch { return; }
       if (rehearsal) return;
