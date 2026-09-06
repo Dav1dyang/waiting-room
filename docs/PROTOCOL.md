@@ -51,7 +51,7 @@ The plugin classifies on the machine (`plugin/scripts/signal.sh`) and sends one 
 { "token": "k8s2vq7m…", "event": "tick", "why": null, "session": "3f9a…(16 hex of sha256)", "ts": 1757200000000 }
 ```
 
-Reply `{}` or, at most once per task, `{ "open": "https://…/room?t=TICKET" }`. The plugin opens that URL in a Chrome app window behind the terminal, under an atomic lock, and never prints anything.
+Reply `{}` or, at most once per task, `{ "open": "https://…/room?t=TICKET" }`. The plugin opens that URL as an app window in its own Chrome instance (its own profile under `~/.waiting-room/chrome`, launched hidden, D-87), under an atomic lock, and never prints anything. A reply of `{ "quit": true }` means no window exists and none is on its way, so the plugin may quit that instance.
 
 `ts` is the plugin's clock and `session` is a hash of the Claude Code session id. Hooks are async, so they can arrive out of order: a `stopped` older than the newest `started` or `tick` is ignored, and a `tick` older than the `stopped` that ended the task is ignored. One machine can run several Claude sessions: a task ends when the last session that touched it stops (D-09). Nothing else in the body is read.
 
@@ -61,7 +61,7 @@ Other HTTP routes:
 | --- | --- | --- |
 | `POST /api/register` | `{ token, invite }` | `{ ok, count, setup }` or `{ ok:false, error:"invite" }` |
 | `POST /api/off` | `{ token }` | `{ ok }`, closes any window |
-| `GET /api/count?t=TOKEN` | | `{ count, enabled }`; count means others, never you |
+| `GET /api/count?t=TOKEN` | | `{ count, enabled, window }`; count means others, never you; window is true while a window exists or is on its way |
 | `POST /api/rehearse` | `{ token }` | `{ ok }`, next hook opens a test window (D-84) |
 | `GET /api/probes?t=TOKEN` | | own Phase 0 probe records |
 | `GET /ws?t=TICKET` | | WebSocket upgrade |

@@ -42,7 +42,8 @@ function makeOpener(home) {
 
 /** A small, explicit environment. The test machine's own settings must never leak in. */
 function env(home, extra = {}) {
-  const out = { PATH: process.env.PATH, HOME: home, LANG: 'C' };
+  // A test must never launch or quit a real browser: both commands default to no-ops here.
+  const out = { PATH: process.env.PATH, HOME: home, LANG: 'C', WAITING_ROOM_OPEN_CMD: 'true', WAITING_ROOM_QUIT_CMD: 'true', WAITING_ROOM_IDLE_WAIT: '0.2' };
   for (const [k, v] of Object.entries(extra)) if (v !== undefined && v !== null) out[k] = v;
   return out;
 }

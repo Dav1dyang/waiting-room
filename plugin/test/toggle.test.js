@@ -32,7 +32,7 @@ test('on prints the whole welcome and turns the plugin on', async (t) => {
     '',
     ...RULES,
     '',
-    'Set up once (mic, notifications, sound, a test window, your desktop tint):',
+    'Set up once. A page just opened in its own Chrome window (mic, notifications, sound, a test window, your tint). If it did not, open this:',
     `${lobby.url}/setup?t=xyz`,
     '',
     'Nobody else is waiting right now. That is normal.',

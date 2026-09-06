@@ -60,7 +60,7 @@ test('nothing opens before T; one open per task, one retry if the window never c
   assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 10 * S), {});
   const r = hook(l, 'tokenaaaa1', 'tick', 15 * S);
   assert.match(r.open, /^https:\/\/wr\.test\/room\?t=id\d+$/);
-  assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 16 * S), {});
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 16 * S), {}, 'a window is on its way: no quit');
   assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 40 * S), {});
   assert.ok(hook(l, 'tokenaaaa1', 'tick', 46 * S).open, 'retry after OPEN_RETRY');
   assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 80 * S), {}, 'never a third');
@@ -70,7 +70,7 @@ test('a quick task never opens; a stop under T ends it silently', () => {
   const l = mk();
   reg(l, 'tokenaaaa1');
   hook(l, 'tokenaaaa1', 'started', 0);
-  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 5 * S), {});
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 5 * S), { quit: true }, 'nothing on screen: the browser may quit');
   assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'done');
   assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 20 * S), {}, 'a hook after done starts a fresh armed task');
   assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'armed');
@@ -601,4 +601,20 @@ test('an unknown event word changes nothing', () => {
   assert.deepEqual(hook(l, 'tokenaaaa1', '', 0), {});
   assert.deepEqual(hook(l, 'tokenaaaa1', 'constructor', 0), {});
   assert.equal(l.s.tokens.tokenaaaa1.task, null);
+});
+
+test('the quit hint and the count reply say whether a window exists or is coming', () => {
+  const l = mk();
+  reg(l, 'tokenaaaa1');
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'started', 0), {});
+  const r = hook(l, 'tokenaaaa1', 'tick', 15 * S);
+  assert.ok(r.open);
+  let c = l.apply({ kind: 'count', token: 'tokenaaaa1', now: 16 * S }).find((f) => f.type === 'reply').body;
+  assert.equal(c.window, true, 'told to open, not yet connected');
+  wsOpen(l, ticketOf(r), 17 * S);
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 18 * S), {});
+  hook(l, 'tokenaaaa1', 'stopped', 19 * S);
+  c = l.apply({ kind: 'count', token: 'tokenaaaa1', now: 20 * S }).find((f) => f.type === 'reply').body;
+  assert.equal(c.window, false, 'closed by the lobby');
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 21 * S), { quit: true });
 });

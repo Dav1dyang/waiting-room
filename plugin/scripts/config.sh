@@ -17,6 +17,14 @@ WR_FLAG_FILE="$WR_DIR/enabled"
 WR_INVITE_FILE="$WR_DIR/invite"
 WR_ENDPOINT_FILE="$WR_DIR/endpoint"
 WR_LOCK_DIR="$WR_DIR/opening.lock"
+# The room window runs in its own Chrome instance with its own profile (D-87). Opened into the
+# everyday Chrome, a new window took keyboard focus within half a second; opened into a second
+# instance launched hidden, it stays behind the terminal every time, and that instance can take
+# an autoplay flag so the door and the stranger's voice play with no click.
+WR_CHROME_DIR="$WR_DIR/chrome"
+WR_CHROME_FLAGS="--user-data-dir=$WR_CHROME_DIR --no-first-run --no-default-browser-check --autoplay-policy=no-user-gesture-required"
+# How long after a stop to ask the lobby whether a window is still up before quitting that Chrome.
+WR_IDLE_WAIT="${WAITING_ROOM_IDLE_WAIT:-8}"
 
 # A lock this old belonged to a process that died before it could clean up.
 WR_LOCK_STALE=30
@@ -86,7 +94,7 @@ wr_is_enabled() {
   [ -f "$WR_FLAG_FILE" ]
 }
 
-# Open the room window, behind whatever you are looking at.
+# Open the room window, behind whatever you are looking at, in the plugin's own Chrome.
 # WAITING_ROOM_OPEN_CMD replaces the whole thing; the URL arrives as its one argument.
 # The tests use that to capture the URL instead of launching a browser.
 wr_open_url() {
@@ -95,10 +103,53 @@ wr_open_url() {
     sh -c "$WAITING_ROOM_OPEN_CMD \"\$1\"" wr "$url" >/dev/null 2>&1 || true
     return 0
   fi
-  # -n is needed so the --app switch reaches a Chrome that is already running.
-  # -g keeps the new window behind the terminal (research 08).
-  open -g -na "Google Chrome" --args --app="$url" >/dev/null 2>&1 && return 0
+  mkdir -p "$WR_CHROME_DIR" 2>/dev/null || true
+  # -n starts a second instance (the profile keeps it apart from your own Chrome); -g keeps it behind.
+  # shellcheck disable=SC2086
+  open -g -na "Google Chrome" --args $WR_CHROME_FLAGS --app="$url" >/dev/null 2>&1 && return 0
   # No Chrome: the default browser, still in the background.
   open -g "$url" >/dev/null 2>&1 || true
+  return 0
+}
+
+# Open the setup page in that same Chrome, in front, as a normal window: the permissions it
+# grants land in the profile the room window uses.
+wr_open_setup() {
+  local url="$1"
+  if [ -n "${WAITING_ROOM_OPEN_CMD:-}" ]; then
+    sh -c "$WAITING_ROOM_OPEN_CMD \"\$1\"" wr "$url" >/dev/null 2>&1 || true
+    return 0
+  fi
+  mkdir -p "$WR_CHROME_DIR" 2>/dev/null || true
+  # shellcheck disable=SC2086
+  open -na "Google Chrome" --args $WR_CHROME_FLAGS "$url" >/dev/null 2>&1 && return 0
+  open "$url" >/dev/null 2>&1 || true
+  return 0
+}
+
+# Quit the plugin's Chrome. Nothing else runs with that profile path, so the match is exact.
+# WAITING_ROOM_QUIT_CMD replaces it for the tests.
+wr_quit_chrome() {
+  if [ -n "${WAITING_ROOM_QUIT_CMD:-}" ]; then
+    sh -c "$WAITING_ROOM_QUIT_CMD" >/dev/null 2>&1 || true
+    return 0
+  fi
+  if pgrep -f -- "--user-data-dir=$WR_CHROME_DIR" >/dev/null 2>&1; then
+    pkill -f -- "--user-data-dir=$WR_CHROME_DIR" >/dev/null 2>&1 || true
+  fi
+  return 0
+}
+
+# Ask the lobby whether a window is up or on its way; if not, quit the plugin's Chrome.
+wr_quit_if_idle() {
+  local token endpoint reply
+  token="$(wr_token)"
+  [ -n "$token" ] || return 0
+  command -v curl >/dev/null 2>&1 || return 0
+  endpoint="$(wr_endpoint)"
+  reply="$(curl -s -m 5 --connect-timeout 3 "$endpoint/api/count?t=$token" 2>/dev/null || true)"
+  case "$reply" in
+    *'"window":false'*) wr_quit_chrome ;;
+  esac
   return 0
 }

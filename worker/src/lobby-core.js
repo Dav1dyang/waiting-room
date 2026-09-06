@@ -76,7 +76,7 @@ export class Lobby {
     switch (ev.kind) {
       case 'register': this.register(ev); break;
       case 'off': this.off(ev); break;
-      case 'count': this.reply({ count: this.othersFor(ev.token), enabled: !!this.tok(ev.token)?.enabled }); break;
+      case 'count': this.reply({ count: this.othersFor(ev.token), enabled: !!this.tok(ev.token)?.enabled, window: this.hasWindow(ev.token, now) }); break;
       case 'rehearse': this.rehearse(ev); break;
       case 'probes': this.reply({ probes: this.tok(ev.token)?.probes || [] }); break;
       case 'hook': this.hook(ev); break;
@@ -163,7 +163,7 @@ export class Lobby {
         if (Object.keys(task.sessions).length === 0) this.endTask(token, now, 'done', at);
         else { task.lastSignalAt = now; task.lastTs = at; }
       }
-      return this.finishHook(t, token, now, origin);
+      return this.finishHook(t, token, now, origin, true);
     }
     if (!task || task.phase === 'done') {
       if (task && task.phase === 'done' && at < task.endedTs) return this.finishHook(t, token, now, origin);
@@ -190,7 +190,7 @@ export class Lobby {
     this.finishHook(t, token, now, origin);
   }
 
-  finishHook(t, token, now, origin) {
+  finishHook(t, token, now, origin, stopping = false) {
     const hasWindow = !!t.win;
     if (t.rehearse && !hasWindow) {
       t.rehearse = false;
@@ -208,7 +208,17 @@ export class Lobby {
       const ticket = this.makeTicket(token, now, false, task.id);
       return this.reply({ open: origin + '/room?t=' + ticket });
     }
-    this.reply({});
+    // After a stop with no window and none on its way, the plugin may quit its browser (D-87).
+    this.reply(stopping && !this.hasWindow(token, now) ? { quit: true } : {});
+  }
+
+  /** A window exists, is reconnecting, or was just told to open and has not connected yet. */
+  hasWindow(token, now) {
+    const t = this.tok(token);
+    if (!t) return false;
+    if (t.win) return true;
+    const task = t.task;
+    return !!(task && task.phase !== 'done' && task.opens > 0 && !task.everConnected && now - task.lastOpenAt < this.cfg.OPEN_RETRY);
   }
 
   newTask(now, ts) {
