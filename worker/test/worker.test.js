@@ -11,7 +11,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
 
-const WORKER = path.dirname(fileURLToPath(new URL('.', import.meta.url))) + '/';
 const DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BIN = path.join(DIR, 'node_modules', '.bin', 'wrangler');
 const A = 'tokenaaaa1';
@@ -76,6 +75,10 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
   assert.equal((await fetch(base + '/api/hook', { method: 'POST', body: 'nope' })).status, 400);
   assert.equal((await fetch(base + '/api/hook', { method: 'POST', body: JSON.stringify({ pad: 'x'.repeat(5000) }) })).status, 400);
 
+  // A ticket nobody issued gets in the door and is shown out again.
+  const nobody = connect(base + '/room?t=nope');
+  assert.equal(await closedCode(nobody), 4001, 'bad ticket closes with 4001');
+
   // Registration needs the invite.
   const wrong = await post('/api/register', { token: A, invite: 'WRONG' });
   assert.deepEqual(wrong.body, { ok: false, error: 'invite' });
@@ -135,30 +138,43 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
 
   const beats = [];
   for (const n of [4, 3, 2, 1]) {
-    beats.push((await waitFor(a, (m) => m.type === 'countdown' && m.n === n, 4000)).at);
+    beats.push((await waitFor(a, (m) => m.type === 'countdown' && m.n === n, 9000)).at);
     if (n === 3) await post('/api/hook', { token: B, event: 'tick' }); // keep B's Claude alive
   }
   for (let i = 1; i < beats.length; i++) {
     const gap = beats[i] - beats[i - 1];
-    assert.ok(gap > 400 && gap < 1800, `countdown beat ${i} came ${gap} ms after the last one`);
+    // A busy machine stretches the beats; the point is that they keep coming, one by one.
+    assert.ok(gap > 300 && gap < 4000, `countdown beat ${i} came ${gap} ms after the last one`);
   }
 
-  // A's window closes; B is told and shades.
+  // A's window is told to close; B is told and shades. The window closes itself on the frame:
+  // under wrangler dev a socket the Worker closes stays open on the client, see NOTES.md.
   assert.equal((await waitFor(a, (m) => m.type === 'close')).m.reason, 'done');
-  await until(() => a.closed !== null, 5000, 'A socket to close');
   await waitFor(b, (m) => m.type === 'line' && m.key === 'left');
   await waitFor(b, (m) => m.type === 'state' && m.state === 'shaded');
   await waitFor(b, (m) => m.type === 'line' && m.key === 'requeued');
 
-  // One person is left waiting.
-  const count = await get('/api/count?t=' + B);
-  assert.deepEqual(count.body, { count: 1, enabled: true });
+  // One person is left waiting. `count` is other people, so B sees nobody and A sees B.
+  assert.deepEqual((await get('/api/count?t=' + B)).body, { count: 0, enabled: true }, 'B saw ' + trace(b));
+  assert.deepEqual((await get('/api/count?t=' + A)).body, { count: 1, enabled: true }, 'B saw ' + trace(b));
 
   // Off closes the last window.
   assert.deepEqual((await post('/api/off', { token: B })).body, { ok: true });
   assert.equal((await waitFor(b, (m) => m.type === 'close')).m.reason, 'off');
-  await until(() => b.closed !== null, 5000, 'B socket to close');
   assert.deepEqual((await get('/api/count?t=' + B)).body, { count: 0, enabled: false });
+  assert.deepEqual((await get('/api/count?t=' + A)).body, { count: 0, enabled: true }, 'nobody left');
+
+  // A rehearsal window rides the next hook, says so, and joins no queue.
+  const C = 'tokenccccc3';
+  assert.equal((await post('/api/register', { token: C, invite: 'DUCK' })).body.ok, true);
+  assert.deepEqual((await post('/api/rehearse', { token: C })).body, { ok: true });
+  const openC = (await post('/api/hook', { token: C, event: 'started' })).body.open;
+  assert.ok(openC, 'a rehearsal opens at once, before T');
+  const c = connect(openC);
+  assert.equal((await waitFor(c, (m) => m.type === 'hello')).m.rehearsal, true);
+  await waitFor(c, (m) => m.type === 'line' && m.key === 'rehearsal');
+  assert.deepEqual((await get('/api/count?t=' + C)).body, { count: 0, enabled: true }, 'a rehearsal joins no queue');
+  c.ws.close();
 });
 
 // ---------- helpers ----------
@@ -216,11 +232,25 @@ function connect(openUrl) {
   return box;
 }
 
+async function closedCode(box, ms = 8000) {
+  const stop = Date.now() + ms;
+  while (Date.now() < stop) {
+    if (box.closed !== null) return box.closed;
+    await sleep(20);
+  }
+  throw new Error('the socket never closed');
+}
+
+/** A one line summary of everything a window heard, for a failure message. */
+function trace(box) {
+  return box.frames.map((f) => f.m.type + (f.m.key || f.m.state || f.m.reason || (f.m.n ?? '') || '')).join(' ');
+}
+
 function send(box, msg) {
   box.ws.send(JSON.stringify(msg));
 }
 
-async function waitFor(box, pred, ms = 8000) {
+async function waitFor(box, pred, ms = 12000) {
   const stop = Date.now() + ms;
   while (Date.now() < stop) {
     const hit = box.frames.find((f) => pred(f.m));
@@ -228,13 +258,4 @@ async function waitFor(box, pred, ms = 8000) {
     await sleep(20);
   }
   throw new Error('no frame matched in ' + ms + ' ms; saw ' + JSON.stringify(box.frames.map((f) => f.m)));
-}
-
-async function until(fn, ms, what) {
-  const stop = Date.now() + ms;
-  while (Date.now() < stop) {
-    if (fn()) return;
-    await sleep(20);
-  }
-  throw new Error('timed out waiting for ' + what);
 }

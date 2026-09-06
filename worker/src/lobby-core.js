@@ -38,7 +38,7 @@ export class Lobby {
     switch (ev.kind) {
       case 'register': this.register(ev); break;
       case 'off': this.off(ev); break;
-      case 'count': this.reply({ count: this.count(), enabled: !!this.tok(ev.token)?.enabled }); break;
+      case 'count': this.reply({ count: this.othersFor(ev.token), enabled: !!this.tok(ev.token)?.enabled }); break;
       case 'rehearse': this.rehearse(ev); break;
       case 'probes': this.reply({ probes: this.tok(ev.token)?.probes || [] }); break;
       case 'hook': this.hook(ev); break;
@@ -78,7 +78,7 @@ export class Lobby {
     t.invite = invite || t.invite || null;
     t.registeredAt = t.registeredAt || now;
     this.s.tokens[token] = t;
-    this.reply({ ok: true, count: this.count(), setup: origin + '/setup?t=' + token });
+    this.reply({ ok: true, count: this.othersFor(token), setup: origin + '/setup?t=' + token });
   }
 
   newToken() {
