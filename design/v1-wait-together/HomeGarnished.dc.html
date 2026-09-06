@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #DDDDDD; }
+    a { color: #0000EE; } a:hover { color: #551A8B; }
+    * { box-sizing: border-box; }
+    /* Dimensions for IE: */
+    .logwrapper { _width: 96%; _height: 250px; }
+  </style>
+</helmet>
+<div style="width:1024px;height:768px;background:#EEEEEE;position:relative;overflow:hidden;font:16px/1.5 Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#000;">
+  <div style="background:#fff;border-bottom:1px solid #CCCCCC;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
+    <span style="display:inline-flex;align-items:baseline;gap:0.5em;"><span style="font:bold 2em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#0180FE;letter-spacing:-0.02em;">wait-together</span><span style="font:0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;background:#f9f6ba;padding:0 0.3em;">beta</span></span>
+    <div style="display:flex;align-items:center;gap:18px;"><span style="display:inline-flex;gap:6px;align-items:center;font:11px Verdana, Geneva, Tahoma, sans-serif;"><span style="border:1px solid #9DACCF;background:#ECEFF5;color:#3B5998;padding:1px 5px;font-weight:bold;">Like</span><span style="border:1px solid #8FC7E0;background:#E9F5FB;color:#0084b4;padding:1px 5px;font-weight:bold;">Tweet</span><span style="border:1px solid #BBB;background:#fff;color:#333;padding:1px 5px;">Select language &#9662;</span></span><span style="font:bold 0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#555555;">4 people waiting on their Claudes</span></div>
+  </div>
+  <div style="position:absolute;right:210px;top:66px;transform:rotate(8deg);background:#f9f6ba;color:#B00;font:bold 0.8em Arial, 'Helvetica Neue', Helvetica, sans-serif;padding:0.3em 0.8em;border:1px solid #E0C400;">NOW WITH AUDIO</div>
+  <div style="position:absolute;left:16px;top:80px;right:192px;background:#fff;border:1px solid #CCCCCC;border-radius:0.5em;padding:0 1em 1em;line-height:1.5;">
+    <p style="margin:1em 0 0.75em;"><b>wait-together</b> is a way to meet a stranger while your Claude works. Once your Claude has been busy for 30 seconds, we find someone else whose Claude is also busy and put you on a call. When either Claude finishes, the call ends. Every wait, a different stranger.</p>
+    <p style="margin:0 0 1em;">Calls are audio until you both click. Nobody sees what your Claude is doing. Calls are anonymous unless you say who you are (not recommended), and they are never recorded.</p>
+    <h2 style="margin:0.5em 0 0.25em;text-align:center;font:1.25em 'Lucida Grande', 'Lucida Sans Unicode', 'Segoe UI', sans-serif;color:#777;">Start a call</h2>
+    <div style="text-align:center;"><span style="display:inline-block;padding:0.75em 1.5em;border:0;border-radius:3px;background:linear-gradient(to bottom,#80BFFF 0%,#0180FE 100%);color:#fff;font:1.1em Arial, 'Helvetica Neue', Helvetica, sans-serif;cursor:pointer;">Start waiting together</span><div style="font:0.7em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#AAA;margin-top:0.4em;">Opens a small window. Keep it next to your terminal.</div></div>
+    <div style="display:flex;gap:2em;align-items:flex-start;margin-top:1.25em;padding-top:1em;border-top:1px solid #CCCCCC;">
+      <label style="display:flex;align-items:center;gap:0.5em;font:bold 0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#555555;white-space:nowrap;">Invite code
+        <span style="display:inline-block;width:9em;padding:0.2em 0.4em;border:1px solid #CCCCCC;background:#fff;font:1em 'Courier New', Courier, monospace;color:#000;font-weight:normal;">HELLO-2009</span></label>
+      <label style="display:flex;align-items:flex-start;gap:0.5em;font:bold 0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#555555;"><span style="display:inline-block;width:13px;height:13px;border:1px solid #777;background:#fff;margin-top:3px;flex:none;"></span><span>I am 18 or older and I will be decent to the stranger.</span></label>
+    </div>
+    <div style="margin-top:1em;font:0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#555555;">Install the plugin, run <kbd style="font:0.95em 'Courier New', Courier, monospace;background:#F4F4F4;border:1px solid #CCCCCC;padding:0 0.3em;">/wait-together on</kbd>, open the link it prints. Quick answers never make a call. If your Claude asks you something mid-task, the call stays on and the stranger sees you are away for a moment.</div>
+  </div>
+  <div style="position:absolute;right:16px;top:80px;"><div style="width:160px;height:600px;border:1px solid #CCCCCC;background:#fff;padding:12px 10px;display:flex;flex-direction:column;gap:10px;font:11px/1.4 Verdana, Geneva, Tahoma, sans-serif;color:#333;"><div style="font:bold 12px Verdana, Geneva, Tahoma, sans-serif;color:#0180FE;">Programmable Mist Maker</div><svg viewBox="0 0 140 140" width="138" height="138" role="img" aria-label="mist maker"><rect width="140" height="140" fill="#EAF3FB"/><ellipse cx="70" cy="112" rx="42" ry="10" fill="#8FB8D9"/><rect x="52" y="70" width="36" height="42" rx="6" fill="#4C86B8"/><circle cx="70" cy="52" r="6" fill="#B9D6EC"/><circle cx="58" cy="38" r="8" fill="#CFE3F3"/><circle cx="84" cy="34" r="10" fill="#DCEBF6"/><circle cx="66" cy="20" r="7" fill="#E7F1F9"/></svg><div>A CR2032 will not run it. Everything else will.</div><div>Kits, boards, and a library that works on the Uno.</div><div style="margin-top:auto;font:bold 11px Verdana, Geneva, Tahoma, sans-serif;color:#0000EE;">shop.byproductlab.com</div><div style="font:9px Verdana, Geneva, Tahoma, sans-serif;color:#999;">house ad &middot; 160&times;600</div></div></div>
+  <div style="position:absolute;left:16px;right:192px;bottom:16px;font:0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#555555;display:flex;justify-content:space-between;align-items:baseline;">
+    <span style="font:bold 1.1em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#000;"><span style="display:inline-block;width:0;height:0;border-left:5px solid #000;border-top:5px solid transparent;border-bottom:5px solid transparent;margin-right:8px;"></span>Send feedback to wait-together's staff</span>
+    <span><a href="#">Rules</a> &middot; <a href="#">Privacy</a> &middot; <a href="#">Report a problem</a></span>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

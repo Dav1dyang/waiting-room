@@ -1,0 +1,125 @@
+{
+  "artboards": [
+    {
+      "file": "TerminalOn.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 720,
+      "h": 360,
+      "title": "1 \u00b7 Terminal: /wait-together on"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 820,
+      "y": 0,
+      "w": 1024,
+      "h": 768,
+      "title": "2a \u00b7 Home, faithful 2009 (empty ad rail)"
+    },
+    {
+      "file": "HomeGarnished.dc.html",
+      "x": 1944,
+      "y": 0,
+      "w": 1024,
+      "h": 768,
+      "title": "2b \u00b7 Home, garnished (house ad, sticker, social row)"
+    },
+    {
+      "file": "PopupIdle.dc.html",
+      "x": 0,
+      "y": 920,
+      "w": 720,
+      "h": 580,
+      "title": "3 \u00b7 Popup: idle"
+    },
+    {
+      "file": "PopupWaiting.dc.html",
+      "x": 800,
+      "y": 920,
+      "w": 720,
+      "h": 580,
+      "title": "4 \u00b7 Popup: waiting"
+    },
+    {
+      "file": "PopupCall.dc.html",
+      "x": 1600,
+      "y": 920,
+      "w": 720,
+      "h": 580,
+      "title": "5 \u00b7 Popup: on a call (audio)"
+    },
+    {
+      "file": "PopupVideo.dc.html",
+      "x": 2400,
+      "y": 920,
+      "w": 720,
+      "h": 580,
+      "title": "6 \u00b7 Popup: video on, Hang up clicked once"
+    },
+    {
+      "file": "PopupNeedsYou.dc.html",
+      "x": 0,
+      "y": 1620,
+      "w": 720,
+      "h": 580,
+      "title": "7 \u00b7 Popup: your Claude needs you"
+    },
+    {
+      "file": "PopupPaused.dc.html",
+      "x": 800,
+      "y": 1620,
+      "w": 720,
+      "h": 580,
+      "title": "8 \u00b7 Popup: stranger is away (their Claude needs them)"
+    },
+    {
+      "file": "PopupGoodbye.dc.html",
+      "x": 1600,
+      "y": 1620,
+      "w": 720,
+      "h": 580,
+      "title": "9 \u00b7 Popup: your Claude has finished"
+    },
+    {
+      "file": "PopupDisconnected.dc.html",
+      "x": 2400,
+      "y": 1620,
+      "w": 720,
+      "h": 580,
+      "title": "10 \u00b7 Popup: stranger disconnected, waiting again"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "note-home",
+      "x": 820,
+      "y": -150,
+      "w": 560,
+      "text": "Home page, two humor levels (Q-17). 2a keeps the 2009 reference layout faithfully (research 05): fluid page, a 160px ad rail reserved on the right and left empty. 2b fills the rail with a house ad for your Mist Maker and adds a sticker and the 2012-style Like / Tweet / Translate row. Values from research 05: Arial 16px, #EEE page, #CCC borders, the blue gradient button with no border."
+    },
+    {
+      "id": "note-popup",
+      "x": 0,
+      "y": 800,
+      "w": 700,
+      "text": "Popup states in the order of one call. 720 x 580 (Q-12). Layout follows the 2009 reference chat screen (research 05): log box, a 5em control bar with 7em-wide white buttons, and the two feeds stacked in one column at the right. Audio first; video after both click. The stranger sees nothing about your task except the countdown."
+    },
+    {
+      "id": "note-pause",
+      "x": 0,
+      "y": 1515,
+      "w": 700,
+      "text": "Screens 7 and 8 are the two sides of the pause rule (D-31, Q-13). 7: your Claude needs you, pale yellow notice, call stays on. 8: what the stranger sees while you are away. Screen 9 is the only task-related thing a stranger ever sees: the countdown."
+    },
+    {
+      "id": "note-typed",
+      "x": 2400,
+      "y": 1515,
+      "w": 420,
+      "text": "Q-18: with typed chat, the middle cell of the control bar becomes a textarea and the log gains blue You: and red Stranger: lines. Not drawn; not in alpha unless you want it."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "artboards": [
+    {
+      "file": "Terminal.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 720,
+      "h": 420,
+      "title": "1 \u00b7 Terminal: /waiting-room:on, once"
+    },
+    {
+      "file": "Setup.dc.html",
+      "x": 820,
+      "y": 0,
+      "w": 680,
+      "h": 504,
+      "title": "2 \u00b7 Setup page, once"
+    },
+    {
+      "file": "Queued.dc.html",
+      "x": 0,
+      "y": 720,
+      "w": 420,
+      "h": 188,
+      "title": "3 \u00b7 Queued: shaded, with the count"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 500,
+      "y": 720,
+      "w": 420,
+      "h": 335,
+      "title": "4 \u00b7 A stranger arrived: talking"
+    },
+    {
+      "file": "NeedsYou.dc.html",
+      "x": 1000,
+      "y": 720,
+      "w": 420,
+      "h": 335,
+      "title": "5 \u00b7 Your Claude needs you"
+    },
+    {
+      "file": "StrangerAway.dc.html",
+      "x": 1500,
+      "y": 720,
+      "w": 420,
+      "h": 335,
+      "title": "6 \u00b7 Stranger's Claude needs them"
+    },
+    {
+      "file": "Closing.dc.html",
+      "x": 0,
+      "y": 1300,
+      "w": 420,
+      "h": 335,
+      "title": "7 \u00b7 Your Claude is done: closing in 5"
+    },
+    {
+      "file": "StrangerLeft.dc.html",
+      "x": 500,
+      "y": 1300,
+      "w": 420,
+      "h": 335,
+      "title": "8 \u00b7 Stranger left: shades back up"
+    },
+    {
+      "file": "Video.dc.html",
+      "x": 1000,
+      "y": 1300,
+      "w": 420,
+      "h": 442,
+      "title": "9 \u00b7 Video on, dot screen"
+    },
+    {
+      "file": "Tints.dc.html",
+      "x": 0,
+      "y": 1900,
+      "w": 460,
+      "h": 384,
+      "title": "10 \u00b7 The four desktop tints: Pool is the default (D-78)"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "note-surfaces",
+      "x": 0,
+      "y": -170,
+      "w": 760,
+      "text": "Three surfaces only (D-46). 1: the terminal, where you turn it on and read the rules. 2: a setup page you visit once: mic, notifications, the door sound, a rehearsal window, your desktop tint. After that the only thing you ever see is the room window."
+    },
+    {
+      "id": "note-lead",
+      "x": 0,
+      "y": 500,
+      "w": 940,
+      "text": "v2.3, final tokens from research 09 and 10. Flat pastel desktop (Pool #91CECF by default), black at 1 px, cream panel #F5EEDF with a 6 px inner frame, two pastel button fills (Cyan for Show video, the one inviting action, Blush for Hang up), one yellow highlight, one red live dot. Eight 1-bit icons on an 11 by 11 grid: door (close), shade, person, watch, camera, speaker. Ledge buttons, text only. Two 28-bar meters. ChiKareGo2 16 px with -1 px tracking; Geneva 12 px lines. The window opens shaded when you are queued, knocks on a match, connects on its own (D-79), and closes when your Claude is done."
+    },
+    {
+      "id": "note-lines",
+      "x": 0,
+      "y": 1160,
+      "w": 900,
+      "text": "The lines are the whole interface (D-42, D-43). *** lines are the room talking. YOU: and STRANGER: are away messages the plugin posts for you; nobody types. The count always means other people (D-70). The red dot means the mic is live; the hollow dot means it is not."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

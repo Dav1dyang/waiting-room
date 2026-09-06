@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>waiting-room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&family=Martian+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#151C26; --muted:#5A6675; --line:#CDD4DC;
+  --you:#1F4FD8; --you-soft:#DCE5FB; --them:#C9432B; --them-soft:#F8E0DA;
+  --work:#D7DDE5; --work-ink:#3E4A58; --code-bg:#E4E9F0; --warn:#B7791F; --warn-soft:#FBF0DA;
+  --mono:"Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --serif:"Literata", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F141A; --surface:#161C24; --ink:#E5E9EE; --muted:#96A1AD; --line:#2A333E;
+    --you:#7C9EFF; --you-soft:#1D2A4D; --them:#FF8A73; --them-soft:#4A241C;
+    --work:#2A333E; --work-ink:#B8C2CD; --code-bg:#1C242E; --warn:#E0A94A; --warn-soft:#3A2E16;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F141A; --surface:#161C24; --ink:#E5E9EE; --muted:#96A1AD; --line:#2A333E;
+  --you:#7C9EFF; --you-soft:#1D2A4D; --them:#FF8A73; --them-soft:#4A241C;
+  --work:#2A333E; --work-ink:#B8C2CD; --code-bg:#1C242E; --warn:#E0A94A; --warn-soft:#3A2E16;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.6;font-variation-settings:"opsz" 14}
+a{color:var(--you);text-decoration-thickness:1px;text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--you);outline-offset:2px}
+.page{max-width:1180px;margin:0 auto;padding:36px 24px 80px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px}
+@media (max-width:900px){.page{grid-template-columns:1fr;gap:24px;padding:20px 16px 60px}}
+.rail{position:sticky;top:20px;align-self:start;font-family:var(--mono);font-size:11.5px;line-height:1.5}
+.rail .brand{font-weight:600;font-size:12px;letter-spacing:.02em;margin-bottom:4px}
+.rail .sub{color:var(--muted);margin-bottom:18px}
+.rail nav a{display:block;color:var(--ink);text-decoration:none;padding:4px 0;border-top:1px solid var(--line)}
+.rail nav a:last-child{border-bottom:1px solid var(--line)}
+.rail nav a:hover{color:var(--you)}
+.rail nav .n{display:inline-block;width:2.2em;color:var(--muted)}
+@media (max-width:900px){.rail{position:static}.rail nav{display:flex;flex-wrap:wrap;gap:4px 14px}.rail nav a{border:0;padding:2px 0}}
+main{max-width:840px;min-width:0}
+h1{font-family:var(--serif);font-weight:600;font-size:40px;line-height:1.1;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance;font-variation-settings:"opsz" 72}
+.lede{font-size:20px;line-height:1.45;color:var(--ink);max-width:36em;margin:10px 0 0;font-variation-settings:"opsz" 24}
+.meta{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin:16px 0 0;display:flex;flex-wrap:wrap;gap:6px 18px}
+h2{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.2;margin:64px 0 14px;text-wrap:balance;font-variation-settings:"opsz" 48;scroll-margin-top:24px}
+h3{font-family:var(--serif);font-weight:600;font-size:18.5px;line-height:1.3;margin:30px 0 8px;text-wrap:balance}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+p{max-width:68ch;margin:0 0 14px}
+ul,ol{max-width:68ch;padding-left:1.3em;margin:0 0 14px}
+li{margin:0 0 6px}
+li::marker{color:var(--muted)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--mono);font-size:.82em;background:var(--code-bg);padding:1px 5px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.55;background:var(--code-bg);padding:14px 16px;border-radius:4px;overflow-x:auto;margin:0 0 16px;max-width:100%}
+pre code{background:none;padding:0;font-size:inherit}
+.tldr{background:var(--surface);border:1px solid var(--line);padding:18px 22px;margin:28px 0 0}
+.tldr ul{margin:0;max-width:none}
+.tldr li{margin-bottom:8px}
+.tbl{overflow-x:auto;margin:0 0 18px;background:var(--surface);border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.45}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.k{font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--work-ink)}
+td.line{font-family:var(--mono);font-size:12.5px}
+td.line .you{color:var(--you)}
+td.line .them{color:var(--them)}
+.swatch{display:inline-block;width:14px;height:14px;border:1px solid var(--line);vertical-align:-2px;margin-right:6px;border-radius:2px}
+.note{border-left:3px solid var(--you);background:var(--surface);padding:12px 16px;margin:0 0 18px;max-width:72ch}
+.note p:last-child{margin-bottom:0}
+.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+figure{margin:26px 0 30px;background:var(--surface);border:1px solid var(--line);padding:18px 18px 12px}
+figure svg{display:block;max-width:100%;height:auto;color:var(--ink)}
+figcaption{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:10px;max-width:80ch}
+.sv-box{fill:var(--surface);stroke:currentColor;stroke-width:1.2}
+.sv-lobby{fill:var(--you-soft);stroke:var(--you);stroke-width:1.4}
+.sv-t{font-family:var(--mono);font-size:11px;fill:currentColor}
+.sv-t.mu{fill:var(--muted)}
+.sv-t.you{fill:var(--you)}
+.sv-t.b{font-weight:600;font-size:12px}
+.sv-l{stroke:currentColor;stroke-width:1.2;fill:none}
+.sv-l.you{stroke:var(--you)}
+.sv-l.dash{stroke-dasharray:4 4}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:0 0 18px}
+.card{background:var(--surface);border:1px solid var(--line);padding:14px 16px}
+.card h4{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.card p,.card ul,.card ol{font-size:15px;margin-bottom:8px}
+.card ul,.card ol{padding-left:1.1em}
+.card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0}
+.small{font-size:14.5px;color:var(--muted)}
+.decision td:first-child{font-family:var(--mono);font-size:12px;white-space:nowrap}
+.q-default{display:block;margin-top:4px;font-family:var(--mono);font-size:12px;color:var(--work-ink)}
+.qa dt{font-weight:600;margin:18px 0 4px;font-size:17.5px}
+.qa dd{margin:0 0 4px;max-width:68ch}
+footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.6}
+@media (prefers-reduced-motion: no-preference){html{scroll-behavior:smooth}}
+</style>
+</head><body>
+<div class="page">
+<aside class="rail">
+  <div class="brand">waiting-room</div>
+  <div class="sub">plan v0.5<br>2026-09-06</div>
+  <nav aria-label="Sections">
+    <a href="#tldr"><span class="n">00</span>Summary</a>
+    <a href="#decided"><span class="n">01</span>What we decided</a>
+    <a href="#how"><span class="n">02</span>How it works</a>
+    <a href="#window"><span class="n">03</span>The room window</a>
+    <a href="#setup"><span class="n">04</span>Setup, once</a>
+    <a href="#look"><span class="n">05</span>The look</a>
+    <a href="#plan"><span class="n">06</span>Build plan</a>
+    <a href="#edges"><span class="n">07</span>Edge cases</a>
+    <a href="#cost"><span class="n">08</span>Free tier, plugins</a>
+    <a href="#questions"><span class="n">09</span>Open questions</a>
+    <a href="#decisions"><span class="n">10</span>Decision log</a>
+    <a href="#changes"><span class="n">11</span>Change log</a>
+    <a href="#files"><span class="n">12</span>Files and sources</a>
+  </nav>
+</aside>
+
+<main>
+<header>
+  <span class="eyebrow">Plan v0.5 · replaces v0.4</span>
+  <h1>waiting-room</h1>
+  <p class="lede">While your Claude works, a small shaded window shows how many others are waiting too. When a stranger is matched it unrolls and you talk. When either Claude finishes, it closes. Every wait, a different stranger.</p>
+  <div class="meta">
+    <span>Name confirmed (D-38)</span>
+    <span>Updated 2026-09-06</span>
+    <span>v0.1 to v0.3 in <a href="archive/">docs/archive</a></span>
+  </div>
+</header>
+
+<section id="tldr">
+  <div class="tldr">
+    <span class="eyebrow">Summary</span>
+    <ul>
+      <li><strong>What it is.</strong> A Claude Code plugin plus one small web page. Hooks tell a tiny lobby "my Claude started" and "my Claude stopped". The lobby pairs two people whose Claudes are both working and connects them by audio, browser to browser. Nothing about your task ever leaves your machine.</li>
+      <li><strong>What changed since v0.4.</strong> You answered the last three questions. Pool is the default tint, the lines are Geneva, and a stranger connects automatically: no pick-up click, because turning the plugin on is the consent. The Knock state is gone, a quiet room shades back up on its own, and the no-click audio test joins the focus test as a gate. TURN billing is settled: STUN only until a pair fails to connect, then a card with a cap we build ourselves. The threshold is 15 s now, not 30.</li>
+      <li><strong>Two things to watch.</strong> A window on every long turn is fine only if it never steals keyboard focus from the terminal. And with no click, a fresh app window must turn the mic on and play the stranger's audio with no gesture. Two short Phase 0 tests decide; each has a fallback: the notification path, and the pick-up click.</li>
+      <li><strong>The look.</strong> Unchanged in spirit: a Classic Mac OS window in the Poolsuite grammar, black at one pixel, pixel type at native size, one texture. New: pastel desktop tints chosen once at setup, a bar-graph audio meter like Poolsuite's radio, and the dot screen on video. Research 09 set the hexes and the icon grid; research 10 verified the dot screen and the shade. One more change from the research: picking up takes one click on each side, so the mic never turns on by itself.</li>
+      <li><strong>Next.</strong> No questions open. Phase 0: install the logging plugin, use it for a week, and run the short tests that settle the four timing numbers and the window mechanics.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="decided">
+  <h2>01 · What we decided</h2>
+  <p>Your third and fourth rounds of answers, turned into rules. Reasoning is in <a href="DECISIONS.md">DECISIONS.md</a>.</p>
+  <div class="tbl"><table>
+    <tr><th>Topic</th><th>Rule</th><th>Log</th></tr>
+    <tr><td>When the window appears</td><td>As soon as you are queued (15 s into a task), shaded: title bar and one count line. Silent. It unrolls with the door sound when a stranger enters.</td><td class="k">D-62</td></tr>
+    <tr><td>While queued</td><td>It stays. When the stranger leaves it shades back up. It closes when your Claude finishes, when you hang up, or when your Claude goes quiet.</td><td class="k">D-63, D-69</td></tr>
+    <tr><td>Closing it yourself</td><td>Means "not this turn". Nothing reopens until your next task. One open per task, ever.</td><td class="k">D-68</td></tr>
+    <tr><td>The count</td><td>Always other people: "2 others are waiting for their Claude." Alone: "Nobody else is waiting right now. Your Claude is still working."</td><td class="k">D-70</td></tr>
+    <tr><td>A stranger arrives</td><td>Automatic. Both windows unroll, a notification knocks, the door plays, the mic turns on, the red dot shows. Turning the plugin on is the consent. Hang up is one click.</td><td class="k">D-79</td></tr>
+    <tr><td>A quiet room</td><td>After Q seconds with both meters at zero: "Quiet room. Back in the queue." The mic is released and the window shades. Q starts at 45 s.</td><td class="k">D-80</td></tr>
+    <tr><td>The mic</td><td>Turns on only when a stranger enters, never while you wait. Released when the room empties or goes quiet.</td><td class="k">D-57</td></tr>
+    <tr><td>Pause lines</td><td>Away messages: "YOU: brb, my Claude needs me", then "YOU: back". Deadpan room lines for enter, leave, and the countdown.</td><td class="k">D-42</td></tr>
+    <tr><td>Sounds</td><td>Three, synthesized: door in, door out, a knock on 3, 2, 1. Quiet, with a mute. The queued open is silent.</td><td class="k">D-47, D-60</td></tr>
+    <tr><td>Design</td><td>The Classic Mac OS lead, accepted, with four adjustments: shorter log, dot-screen video, pastel colors, a bar-graph audio meter.</td><td class="k">D-59, D-64 to D-66, D-72</td></tr>
+    <tr><td>Threshold</td><td>15 s, was 30 s. Quicker company, more windows a day. Provisional until Phase 0 logging.</td><td class="k">D-83</td></tr>
+    <tr><td>Browser</td><td>Chrome on macOS for the alpha.</td><td class="k">D-67</td></tr>
+    <tr><td>Tint and type</td><td>Pool by default. Lines in Geneva; pixel type for the title, the labels, and the countdown digit.</td><td class="k">D-78, D-81</td></tr>
+    <tr><td>TURN and the card</td><td>STUN only through Phase 1, no card. Add the card the first time two friends cannot connect; the cap is ours.</td><td class="k">D-82</td></tr>
+  </table></div>
+  <p class="small">Still standing: observe, never predict (D-02); cloud lobby, no local server (D-04); 15-second threshold (D-06, D-83); browser-to-browser media (D-07); no database, no accounts (D-08); the stranger sees nothing about your task (D-30); workers.dev hosting (D-32); no lurkers, ever (D-29); private repo for the alpha (D-22); hang up means out for this turn (D-49).</p>
+</section>
+
+<section id="how">
+  <h2>02 · How it works</h2>
+  <p>Three pieces. The terminal says a few words to the lobby after every step Claude takes. The lobby keeps the queue and, once per task, tells the terminal to open the window. From then on the window and the lobby talk directly, and the two windows talk to each other.</p>
+
+  <figure>
+    <svg viewBox="0 0 1040 340" role="img" aria-label="Pipeline: hooks in your terminal post started, stopped, paused, and tick events to a Cloudflare Worker with a Lobby Durable Object; once per task, when you are queued, the lobby replies with an open instruction and the terminal opens a small shaded window in the background; both windows connect to the lobby by WebSocket for the count, matching, lines, and signaling; audio and video flow browser to browser.">
+      <defs>
+        <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <rect x="20" y="40" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="130" y="66" text-anchor="middle" class="sv-t b">Your terminal</text>
+      <text x="130" y="86" text-anchor="middle" class="sv-t mu">Claude Code + plugin hooks</text>
+      <rect x="800" y="40" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="910" y="66" text-anchor="middle" class="sv-t b">Stranger's terminal</text>
+      <text x="910" y="86" text-anchor="middle" class="sv-t mu">Claude Code + plugin hooks</text>
+      <rect x="410" y="40" width="220" height="64" rx="4" class="sv-lobby"/>
+      <text x="520" y="66" text-anchor="middle" class="sv-t b you">Cloudflare Worker</text>
+      <text x="520" y="86" text-anchor="middle" class="sv-t you">Lobby Durable Object</text>
+      <text x="520" y="124" text-anchor="middle" class="sv-t mu">free plan, no database</text>
+
+      <line x1="242" y1="62" x2="408" y2="62" class="sv-l" marker-end="url(#ah2)"/>
+      <text x="325" y="36" text-anchor="middle" class="sv-t">started · stopped</text>
+      <text x="325" y="52" text-anchor="middle" class="sv-t">paused · tick</text>
+      <line x1="408" y1="86" x2="242" y2="86" class="sv-l you" marker-end="url(#ah2)"/>
+      <text x="325" y="104" text-anchor="middle" class="sv-t you">reply: open URL</text>
+      <text x="325" y="118" text-anchor="middle" class="sv-t mu">once, when queued</text>
+
+      <line x1="798" y1="62" x2="632" y2="62" class="sv-l" marker-end="url(#ah2)"/>
+      <text x="715" y="36" text-anchor="middle" class="sv-t">started · stopped</text>
+      <text x="715" y="52" text-anchor="middle" class="sv-t">paused · tick</text>
+      <line x1="632" y1="86" x2="798" y2="86" class="sv-l you" marker-end="url(#ah2)"/>
+      <text x="715" y="104" text-anchor="middle" class="sv-t you">reply: open URL</text>
+      <text x="715" y="118" text-anchor="middle" class="sv-t mu">once, when queued</text>
+
+      <line x1="130" y1="106" x2="130" y2="206" class="sv-l" marker-end="url(#ah2)"/>
+      <text x="140" y="150" class="sv-t">open, in the background</text>
+      <text x="140" y="165" class="sv-t mu">shaded, silent</text>
+      <line x1="910" y1="106" x2="910" y2="206" class="sv-l" marker-end="url(#ah2)"/>
+      <text x="900" y="150" text-anchor="end" class="sv-t">open, in the background</text>
+      <text x="900" y="165" text-anchor="end" class="sv-t mu">shaded, silent</text>
+
+      <rect x="20" y="208" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="130" y="234" text-anchor="middle" class="sv-t b">Your room window</text>
+      <text x="130" y="254" text-anchor="middle" class="sv-t mu">shaded, unrolls on a match</text>
+      <rect x="800" y="208" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="910" y="234" text-anchor="middle" class="sv-t b">Stranger's room window</text>
+      <text x="910" y="254" text-anchor="middle" class="sv-t mu">shaded, unrolls on a match</text>
+
+      <line x1="440" y1="106" x2="242" y2="222" class="sv-l you" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+      <text x="400" y="180" text-anchor="middle" class="sv-t you">WebSocket</text>
+      <text x="400" y="194" text-anchor="middle" class="sv-t mu">count · match · lines · signaling</text>
+      <line x1="600" y1="106" x2="798" y2="222" class="sv-l you" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+      <text x="640" y="180" text-anchor="middle" class="sv-t you">WebSocket</text>
+      <text x="640" y="194" text-anchor="middle" class="sv-t mu">count · match · lines · signaling</text>
+
+      <line x1="242" y1="250" x2="798" y2="250" class="sv-l dash" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+      <text x="520" y="242" text-anchor="middle" class="sv-t">audio (video after both click), browser to browser</text>
+      <text x="520" y="268" text-anchor="middle" class="sv-t mu">STUN first; TURN relay only when needed</text>
+      <text x="520" y="310" text-anchor="middle" class="sv-t mu">Nothing from the session (prompt, code, transcript) leaves the machine.</text>
+      <text x="520" y="325" text-anchor="middle" class="sv-t mu">Only event names, a pairing token, and a hashed session id.</text>
+    </svg>
+    <figcaption>The terminal never waits for the lobby (two-second timeout, hooks run async). The hook path only ever receives one "open" per task; everything after that is the window's business.</figcaption>
+  </figure>
+
+  <h3>A wait, in words</h3>
+  <ol>
+    <li>Give Claude a task. Within a second the lobby knows your Claude started. Nothing appears.</li>
+    <li>If Claude finishes within 15 seconds, nothing happens. Quick answers never make a window.</li>
+    <li>At 15 seconds the lobby answers your terminal's next hook call with "open". A shaded window appears behind the terminal, silently: a title bar and "2 others are waiting for their Claude." Most of the time it says nobody else is waiting. That is the normal case, and now you can see it.</li>
+    <li>Someone else's Claude passes 15 seconds too. The lobby pairs you. Both windows unroll, a notification knocks, the door plays, the mic turns on, and the log says "Stranger has entered the room." You talk. Nothing to click.</li>
+    <li>Neither of you says anything for Q seconds: "Quiet room. Back in the queue." Both windows shade, mics off, and you are queued again.</li>
+    <li>Claude asks you something: a line appears on both sides, the call goes on. You answer Claude, another line: "back".</li>
+    <li>The stranger's Claude finishes first: their countdown shows on your side, "Stranger has left the room.", and your window shades back up. You are queued again, mic off.</li>
+    <li>Your Claude finishes. Both windows count down from 5 with a knock on the last three. Yours closes. If you were alone, it just says "Your Claude is done." and closes.</li>
+  </ol>
+
+  <figure>
+    <svg viewBox="0 0 900 270" role="img" aria-label="State machine: Idle to Armed on started; Armed back to Idle if stopped within 15 seconds; Armed to Queued after 15 seconds, which is when the shaded window opens; Queued to Room on a match, when the window unrolls; Room back to Queued when the stranger leaves, the window shades; Room to Closing on a finish or a hang-up; Closing to Idle after the countdown; Room stays in Room when Claude needs you; Queued or Room to Idle when your Claude goes quiet; any state to Idle after a silence timeout.">
+      <defs>
+        <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <path d="M655,58 L655,26 L75,26 L75,58" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="365" y="20" text-anchor="middle" class="sv-t mu">countdown ran out, or you hung up, or your Claude went quiet: window closes, mic released</text>
+      <rect x="20" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="75" y="87" text-anchor="middle" class="sv-t b">Idle</text>
+      <rect x="165" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="220" y="87" text-anchor="middle" class="sv-t b">Armed</text>
+      <rect x="310" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="365" y="87" text-anchor="middle" class="sv-t b">Queued</text>
+      <rect x="455" y="60" width="110" height="44" rx="22" class="sv-lobby"/><text x="510" y="87" text-anchor="middle" class="sv-t b you">Room</text>
+      <rect x="600" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="655" y="87" text-anchor="middle" class="sv-t b">Closing</text>
+      <line x1="132" y1="82" x2="163" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="147" y="52" text-anchor="middle" class="sv-t">started</text>
+      <line x1="277" y1="82" x2="308" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="292" y="52" text-anchor="middle" class="sv-t">15 s: open</text>
+      <line x1="422" y1="82" x2="453" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="437" y="52" text-anchor="middle" class="sv-t">matched: knock</text>
+      <line x1="567" y1="82" x2="598" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="582" y="52" text-anchor="middle" class="sv-t">done · hang up</text>
+      <path d="M220,106 L220,130 L75,130 L75,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="147" y="126" text-anchor="middle" class="sv-t mu">stopped within 15 s</text>
+      <path d="M495,106 L495,164 L365,164 L365,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="430" y="178" text-anchor="middle" class="sv-t mu">stranger left: shade</text>
+      <path d="M350,106 L350,196 L75,196 L75,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="212" y="192" text-anchor="middle" class="sv-t mu">stopped, or Claude went quiet</text>
+      <path d="M545,106 C563,136 505,136 523,108" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="600" y="146" text-anchor="middle" class="sv-t mu">needs you: a line, no change</text>
+      <rect x="14" y="208" width="267" height="1" fill="currentColor" opacity=".35"/>
+      <text x="147" y="224" text-anchor="middle" class="sv-t mu">no window</text>
+      <rect x="304" y="208" width="122" height="1" fill="currentColor" opacity=".35"/>
+      <text x="365" y="224" text-anchor="middle" class="sv-t you">shaded</text>
+      <rect x="449" y="208" width="267" height="1" fill="currentColor" opacity=".35"/>
+      <text x="582" y="224" text-anchor="middle" class="sv-t you">unrolled</text>
+      <text x="450" y="248" text-anchor="middle" class="sv-t">Any state returns to Idle after N minutes without a signal.</text>
+      <text x="450" y="263" text-anchor="middle" class="sv-t mu">Four numbers to measure in Phase 0: the 15 s arm threshold, the silence timeout N, the pause grace G, the freshness window F.</text>
+    </svg>
+    <figcaption>Since v0.4: the window exists from Queued on. Shaded while you wait, unrolled while a stranger is there, shaded again when they leave.</figcaption>
+  </figure>
+
+  <h3>Why this is simpler than v0.3</h3>
+  <p>In v0.3 the lobby had to catch a match and slip "open" into the next hook reply at the right moment. Now the hook path does one thing: at 15 seconds it opens the window, once. Matching, lines, the count, the countdown, and shading all happen over the window's own connection, which is instant and does not depend on Claude touching a tool. The terminal side stays four words: started, stopped, paused, tick.</p>
+  <p>Three rules keep it honest. The lobby pairs only people whose last hook call is fresh (window F, measured in Phase 0), so an interrupted session is never matched. It sends "open" at most once per task, and if you close the window yourself nothing reopens until your next task. And a window whose Claude went quiet says so and closes itself after a short grace, rather than lingering.</p>
+</section>
+
+<section id="window">
+  <h2>03 · The room window</h2>
+  <p>One small window, 380 pixels wide. Shaded it is 100 pixels tall, most of that title bars. Unrolled it is about 230, or 335 with video. Five lines of log, one row of buttons, the count line, two meters. Nothing to type.</p>
+  <div class="cols">
+    <div class="card"><h4>Shaded (queued)</h4><p>Title bar and the count line. Silent. This is what you see most of the time. Note: Chrome's own thin title bar sits above ours; the canvas draws only ours, so judge the double bar in Phase 0. Research 10 read the Chromium source: the page can resize its own window in a Chrome app window, with a 100 px floor. So shaded is 380 by 100 outer: Chrome's thin title bar, then ours, then the count line.</p></div>
+    <div class="card"><h4>A stranger arrives</h4><p>The window unrolls, a macOS notification knocks, the door plays, the mic turns on, the red dot appears. "Stranger has entered the room." Nothing to click.</p></div>
+    <div class="card"><h4>Talking</h4><p>Buttons: Hang up, Show video, Report, and the speaker toggle. Meters move only with real sound. Quiet for Q seconds and the room shades back up.</p></div>
+    <div class="card"><h4>Closing</h4><p>"Your Claude is done. Closing in 5." with a big 5 and a knock on 3, 2, 1. Then the window closes itself. If the stranger leaves instead, the window shades back up.</p></div>
+    <div class="card"><h4>Video</h4><p>Both clicked Show video: two small feeds above the log, color under a fine dot screen, in the same window. Either can hide theirs.</p></div>
+  </div>
+
+  <h3>The lines</h3>
+  <p>Everything the window ever says. Both people see the event; nobody sees what Claude asked.</p>
+  <div class="tbl"><table>
+    <tr><th>Moment</th><th>Your window</th><th>Stranger's window</th></tr>
+    <tr><td>Queued, alone</td><td class="line">Nobody else is waiting right now. Your Claude is still working.</td><td class="line"></td></tr>
+    <tr><td>Queued, others around</td><td class="line">2 others are waiting for their Claude.</td><td class="line"></td></tr>
+    <tr><td>A stranger arrives (the knock)</td><td class="line">Stranger has entered the room.</td><td class="line">Stranger has entered the room.</td></tr>
+    <tr><td>Quiet for Q seconds</td><td class="line">Quiet room. Back in the queue. (then shades)</td><td class="line">Quiet room. Back in the queue. (then shades)</td></tr>
+                <tr><td>Your Claude asks permission, a structured question, tool input, or stops with a background task running</td><td class="line"><span class="you">YOU:</span> brb, my Claude needs me</td><td class="line"><span class="them">STRANGER:</span> brb, my Claude needs me</td></tr>
+    <tr><td>You answer and Claude continues</td><td class="line"><span class="you">YOU:</span> back</td><td class="line"><span class="them">STRANGER:</span> back</td></tr>
+    <tr><td>Your Claude ends its turn with a question</td><td class="line">same as a pause, for up to G seconds</td><td class="line">same as a pause</td></tr>
+    <tr><td>Your Claude finishes</td><td class="line">Your Claude is done. Closing in 5.</td><td class="line">Stranger's Claude is done. Leaving in 5.</td></tr>
+    <tr><td>After the countdown</td><td class="line">(window closes)</td><td class="line">Stranger has left the room. (then shades)</td></tr>
+    <tr><td>You hang up</td><td class="line">(window closes)</td><td class="line">Stranger has left the room. (then shades)</td></tr>
+    <tr><td>Both click video</td><td class="line">Video is on.</td><td class="line">Video is on.</td></tr>
+    <tr><td>Your Claude went quiet (Escape)</td><td class="line">Your Claude went quiet. Closing.</td><td class="line">Stranger has left the room.</td></tr>
+  </table></div>
+
+  <h3>When Claude needs you</h3>
+  <p>The hooks see turns, not tasks. Four pauses are exact signals: permission requests, structured questions, tool input requests, and a stop while a background task is still running. The fifth, a turn that ends with a question in prose, is a guess made on your machine: the script looks at Claude's last line and sends only the verdict. A paused turn holds the room for a grace window G, placeholder 90 seconds. If you give Claude its next instruction within G, the room simply continues. The guess is a switch you can turn off.</p>
+
+  <h3>Video, meter, sounds</h3>
+  <ul>
+    <li><strong>The dot screen.</strong> Color video under a fine black dot grid, like Poolsuite's player. You asked for the simplest way without processing: a CSS overlay on the video element, a radial-gradient dot pattern at a 3 px pitch with multiply blending and a touch of contrast. Nothing is processed and nothing changes on the wire. Research 10 verified it: zero CPU, zero latency, nothing changes on the wire, and no blend mode (with black dots it is mathematically identical, and blend modes over video have real Chromium bugs). Poolsuite's own effect is the same idea, a one-bit 4 by 4 tile at 25 percent coverage over color video. A true 1-bit dither stays written down, unbuilt.</li>
+    <li><strong>The meter.</strong> A row of thin ascending bars per speaker, lit from the left by the sound level, in the spirit of Poolsuite's radio meter. It is the one continuously moving thing in the window, and it moves only with real sound. Research 09 sized it: 28 bars at a 3 px pitch, 84 by 10 px, a loudness level rather than a spectrum, instant attack, 300 ms release, a peak-hold bar, unlit bars absent, a noise gate so silence is flat.</li>
+    <li><strong>Sounds.</strong> Door in, door out, knock. Under 300 ms each, quiet, ducked during a call, a visible mute. The queued open is silent; the macOS notification is the knock; the door plays as the stranger enters. Turning the plugin on was the consent.</li>
+  </ul>
+
+  <h3>Hang up, report, limits</h3>
+  <ul>
+    <li><strong>Hang up</strong> closes your window and keeps you out of the queue until your next task. So does closing the window yourself.</li>
+    <li><strong>Report</strong> blocks that machine's token from ever matching you again and flags it to me. It stays clickable after the room empties.</li>
+    <li>A room ends after 30 minutes regardless. Nothing is ever recorded. There is a kill switch on the lobby.</li>
+  </ul>
+</section>
+
+<section id="setup">
+  <h2>04 · Setup, once</h2>
+  <p>The plugin ships turned off. Turning it on is a CLI conversation plus one browser page you visit once. After that the only thing you ever see is the room window.</p>
+  <div class="cols">
+    <div class="card"><h4>1 · In the terminal</h4>
+      <pre>/waiting-room:on ALPHA-CODE</pre>
+      <p>Prints the five rules, the honest count, and one link with your machine's token in it.</p></div>
+    <div class="card"><h4>2 · The setup page</h4>
+      <ol>
+        <li>Allow the microphone, "on every visit". It turns on only when a stranger enters.</li>
+        <li>Allow notifications: the knock when a stranger arrives, since the window opens behind your terminal.</li>
+        <li>Sound check: hear the door.</li>
+        <li>Rehearsal: click, then send Claude any message. A shaded test window opens behind the terminal and closes itself in 5 seconds, through the same path as the real thing. If it works once, you trust it.</li>
+        <li>Pick your desktop tint. Pool, Shell, Mint, or Dusk.</li>
+      </ol>
+      <p>Close the tab. Done.</p></div>
+    <div class="card"><h4>3 · From then on</h4>
+      <pre>/waiting-room:status
+/waiting-room:off</pre>
+      <p>Status prints on or off and "2 others are waiting right now." Off stops all signals.</p></div>
+  </div>
+  <p class="small">The setup link carries your long-lived token once. The room window's link keeps a constant path with a short-lived ticket in the query, so Chrome remembers its size and place and nothing in history can be replayed (D-53, D-58).</p>
+</section>
+
+<section id="look">
+  <h2>05 · The look</h2>
+  <p>The Classic Mac OS lead is accepted. What follows are the four adjustments you asked for, informed by research 09 (Poolsuite's color system, icons, buttons, and what makes retro feel modern) and research 10 (the dot screen and the shade). Mockups are on the <a href="https://claude.ai/code/artifact/447cf200-0465-4dcf-8ff0-984537a43877">design canvas</a>; working files and the generator are in <code>design/</code>.</p>
+
+  <h3>Retro, and also modern and fun</h3>
+  <p>Research 09 read Poolsuite's live stylesheet and store. The formula is not effects; it is a 1995 grammar laid out with 2020s whitespace. The rules we adopt:</p>
+  <ul>
+    <li><strong>Flat and generous.</strong> A window floats in a flat field of one pastel. No gradients, bevels, drop shadows, or desktop textures. Our desktop dither is gone.</li>
+    <li><strong>Pixel type at native size, tightly tracked.</strong> ChiKareGo2 at 16 px with -1 px letter-spacing and line-height equal to the size. Every raster icon authored at 2x and shown at half, so it is crisp on a retina screen.</li>
+    <li><strong>A 2 px grid.</strong> 1 px frames, 4 px button corners, 6 px window padding, 6 and 10 px gaps. Nothing looks approximate.</li>
+    <li><strong>Color carries mood, never structure or meaning.</strong> Exactly two things mean something: the yellow highlight behind the one line that matters now, and the red dot that says the mic is live.</li>
+    <li><strong>Motion is quantized.</strong> Stepped blinks, 0.1 to 0.15 s transitions, no transition on a button press, one 1 s halo on the live dot, nothing over 0.3 s.</li>
+    <li><strong>The joke costs nothing and does not move.</strong> The close box is a door, the queued line wears a watch, and the count line tells the truth.</li>
+  </ul>
+
+  <h3>Colors: pastel tints, black lines</h3>
+  <p>Everything structural stays black at one pixel on white or cream. Color lives in two places: the desktop behind the window, and one or two button fills. You choose the desktop tint once, on the setup page.</p>
+  <div class="tbl"><table>
+    <tr><th>Token</th><th>Value</th><th>Use</th></tr>
+    <tr><td>Pool (default)</td><td class="k"><span class="swatch" style="background:#91CECF"></span>#91CECF</td><td>Desktop tint. A cool frame around a warm panel, which is the reading you had of the Poolsuite screenshot.</td></tr>
+    <tr><td>Shell · Mint · Dusk</td><td class="k"><span class="swatch" style="background:#E6B1B2"></span>#E6B1B2 <span class="swatch" style="background:#A7CDAB"></span>#A7CDAB <span class="swatch" style="background:#BBBCE9"></span>#BBBCE9</td><td>The other tints, same lightness and chroma, hue rotated, so they read as one family. Chosen once at setup.</td></tr>
+    <tr><td>Cream · White · Black</td><td class="k"><span class="swatch" style="background:#F5EEDF"></span>#F5EEDF <span class="swatch" style="background:#FFFFFF"></span>#FFFFFF <span class="swatch" style="background:#000000"></span>#000000</td><td>Panel, paper, every line at 1 px.</td></tr>
+    <tr><td>Cyan · Blush</td><td class="k"><span class="swatch" style="background:#B7E7E8"></span>#B7E7E8 <span class="swatch" style="background:#FBD0D0"></span>#FBD0D0</td><td>Two button fills, a step lighter than the tints: the one inviting action (Show video) and Hang up. Everything else is white.</td></tr>
+    <tr><td>Highlight · Live</td><td class="k"><span class="swatch" style="background:#FFF1A8"></span>#FFF1A8 <span class="swatch" style="background:#D01D21"></span>#D01D21</td><td>The pause line; a single 4 px dot with a slow halo meaning the mic is on.</td></tr>
+  </table></div>
+  <p class="small">Black text is 11:1 or better on every one of these, more than double the accessibility bar. Dark mode later, as a token swap (same hues at a lower lightness), never as an inversion filter, which is what Poolsuite does and which turns pastels to mud.</p>
+
+  <h3>Icons and buttons</h3>
+  <p>Poolsuite keeps two icon registers and never mixes them: multi-color pixel art in the dock, strictly 1-bit black inside windows. We have no dock, so everything is 1-bit. Eight icons on an 11 by 11 grid, drawn on graph paper the way Susan Kare drew the first Mac icons: door (close), hang up, camera, flag (report), speaker on, speaker muted, person (the count), and a wristwatch (waiting, the Classic Mac wait signal), plus the shade widget in the title bar. Icons live in the title bar, the count line, the status strip, and the video panes. Buttons stay text only: three actions, one or two words each, and at 16 px a word is faster than a glyph.</p>
+  <ul>
+    <li><strong>Button anatomy, borrowed from Poolsuite's media buttons.</strong> A 1 px black border, 4 px corners, a 1 px ledge underneath and a 1 px white line inside the top edge. On press it drops one pixel into the ledge, no transition.</li>
+    <li><strong>States in a 1-bit language.</strong> Hover: nothing. Disabled: dotted outline, grey text. The one action Return triggers wears the thick System 7 ring. Keyboard focus fills with the tint.</li>
+    <li><strong>The frame reads double.</strong> Six pixels of cream between the window edge and the inner boxes, the way Poolsuite's windows are built.</li>
+  </ul>
+
+  <h3>What is on the canvas</h3>
+  <ul>
+    <li>The terminal, the setup page (mic, notifications, sound, rehearsal, tint), seven room states in the order of one wait: queued (shaded), a stranger arrived and talking, your Claude needs you, the stranger's Claude needs them, closing in 5, stranger left, video on with the dot screen; and the four tints side by side.</li>
+    <li>The two alternates from v2 are gone from the canvas; they remain in the artifact's "Mockup v2" version.</li>
+  </ul>
+</section>
+
+<section id="plan">
+  <h2>06 · Build plan</h2>
+  <div class="cols">
+    <div class="card"><h4>Phase 0 · Measure, about a week</h4>
+      <ul>
+        <li>Install the prototype plugin with logging only. Use Claude normally for a week. The log gives the turn-length distribution, the gaps between hook calls, and the four numbers: arm threshold, silence timeout N, grace G, freshness window F.</li>
+        <li>Five pause tests, one minute each: prose question, AskUserQuestion, permission prompt, Escape mid-turn, background task.</li>
+        <li>Browser tests, listed below. <strong>Tests 3 and 7 are gates.</strong> Focus decides whether the open-when-queued model survives; audio with no click decides whether automatic connect survives.</li>
+      </ul></div>
+    <div class="card"><h4>Phase 1 · Build, two weekends</h4>
+      <ul>
+        <li>Lobby: one Worker, one Durable Object, the signal endpoint with one open per task, room tickets, count, WebSocket rooms, quiet detection, kill switch.</li>
+        <li>Room window: shaded and unrolled states, the lines, audio with the meter, mutual video with the dot screen, hang up, report, self-close.</li>
+        <li>Setup page with the rehearsal and the tint picker. Plugin: three commands and eight hooks, already validated.</li>
+      </ul></div>
+    <div class="card"><h4>Phase 2 · Friends</h4>
+      <ul>
+        <li>Invite codes for five to ten friends. Two weeks. Fix what the lines get wrong, tune F, G, and N.</li>
+        <li>Decide the Reddit tier after this, not before.</li>
+        <li>The card: add it the first time two friends cannot connect (STUN only until then). Mint short-lived TURN credentials per room, set the relay budget, and the $1 budget alert. Before the Reddit post at the latest.</li>
+      </ul></div>
+    <div class="card"><h4>Phase 3 · r/ClaudeAI</h4>
+      <ul>
+        <li>Public link, after the checklist in research 04: terms, privacy notice, a real report path, camera-off default, limits, a lawyer's read.</li>
+        <li>Watch the Durable Object request count; that is the first free-tier limit to hit.</li>
+      </ul></div>
+  </div>
+  <h3>Phase 0 browser tests</h3>
+  <p>From research 08 and 10, about 40 minutes in total, Chrome running with your normal profile.</p>
+  <ol>
+    <li>The app window reaches the running Chrome: a chromeless window in your profile, not a tab.</li>
+    <li>Size flags are ignored; confirm it. Then resize and move an app window, close it, reopen the same path with a different query: does it come back where you left it?</li>
+    <li><strong>Focus.</strong> Fire the open while typing in the terminal, with and without the no-focus flag. Do all keystrokes land? If not, the fallback is the notification path, and D-62 is off the table.</li>
+    <li>Self-close works from an OS-opened app window. Then add a redirect, then a pushState, and confirm each breaks it.</li>
+    <li>Close-refusal detection: does the 400 ms check show the manual-close line?</li>
+    <li>Can the page resize itself between 380 by 44 and 380 by 215 inside an app window? Research 10 says yes from the Chromium source, with a 100 px floor that macOS may raise to about 150; this test reads back the real outer and inner height and judges the double title bar.</li>
+    <li><strong>Audio with no click.</strong> Grant "Allow on every visit" once. In a fresh app window, three checks with no gesture: the mic captures; the stranger's stream plays through an audio element; a Web Audio tone plays. Expected: yes, yes, maybe. Fallbacks: the pick-up click (D-75) if the stream will not play; the notification's own system sound for the door if Web Audio is blocked.</li>
+    <li>The dot-screen overlay over a live video element: correct blending, no dropped frames, survives a window resize. Research 10 gives the exact CSS; this only confirms it on your camera and lets you tune the pitch and dot strength live.</li>
+    <li>The knock: a notification from the app window shows on macOS, and clicking it focuses the window.</li>
+    <li>Two hooks at once produce exactly one window.</li>
+    <li>Installed web app and protocol link, only as the v1 upgrade path.</li>
+  </ol>
+</section>
+
+<section id="edges">
+  <h2>07 · Edge cases</h2>
+  <div class="tbl"><table>
+    <tr><th>Case</th><th>What happens</th></tr>
+    <tr><td>Quick answer, under 15 s</td><td>Nothing. No window.</td></tr>
+    <tr><td>You press Escape or Ctrl+C</td><td>The Stop hook does not fire, but the ticks stop too. Past F you cannot be paired. The lobby tells the window your Claude went quiet; it shows the line and closes after a short grace. If you were in a room, the stranger sees "Stranger has left the room."</td></tr>
+    <tr><td>You close the shaded window yourself</td><td>Nothing reopens until your next task. One open per task, always.</td></tr>
+    <tr><td>Terminal closed, crash, laptop asleep</td><td>SessionEnd if graceful, otherwise the same quiet rule. On wake, the next task opens a fresh window.</td></tr>
+    <tr><td>Match during a long think, no tool calls</td><td>The window is already open, so the match arrives over its connection instantly. But past F you are not pairable; F is measured, not guessed.</td></tr>
+    <tr><td>Nobody says anything</td><td>After Q seconds with both meters at zero, "Quiet room. Back in the queue." on both sides; the mics are released, both windows shade, and both are queued again (D-80).</td></tr>
+    <tr><td>Notifications denied</td><td>The window still unrolls and its title flashes, but you may not notice a window behind the terminal. The setup page says so.</td></tr>
+    <tr><td>Window cannot open</td><td>Fallback is a normal browser tab. The setup rehearsal would have shown you this already.</td></tr>
+    <tr><td>Window cannot resize</td><td>The shade is drawn inside a fixed-size window on the desktop texture. Still minimal, slightly taller.</td></tr>
+    <tr><td>Window cannot close itself</td><td>It says "You can close this window now." and stops the mic.</td></tr>
+    <tr><td>Stranger's Claude finishes first</td><td>Their countdown shows on your side, then "Stranger has left the room." and the window shades. You are queued again, mic released.</td></tr>
+    <tr><td>Both Claudes finish together</td><td>Both countdowns run; whichever closes first ends the room.</td></tr>
+    <tr><td>A new stranger while the window is shading</td><td>It unrolls again. There is only ever one window per machine.</td></tr>
+    <tr><td>Several terminals on one machine</td><td>Any working Claude keeps you queued. One token, one window.</td></tr>
+    <tr><td>How many windows a day?</td><td>One per long task. With the 15 s threshold, fifteen to forty a day for heavy use, most of them shaded and saying nobody else is waiting. This is why the focus test matters.</td></tr>
+    <tr><td>Someone hangs up on everyone</td><td>Hang-ups are limited per hour, and a hang-up takes you out for the turn anyway.</td></tr>
+    <tr><td>Abuse</td><td>Report blocks the token both ways and notifies me. Kill switch stops all matching.</td></tr>
+  </table></div>
+</section>
+
+<section id="cost">
+  <h2>08 · Free tier, plugins</h2>
+  <p>The whole service is one Cloudflare Worker with one Durable Object, on the free plan. Each hook call is one request; at a few hundred tool steps a day per person, twenty friends stay far under the daily limit. The window's WebSocket uses the hibernating API so an open shaded window costs nothing while idle. Media never touches the server. Details in research 03.</p>
+  <p>TURN, the relay for the pairs that cannot connect directly, is the one place a card enters. Verified on Cloudflare's own pages: STUN is free and needs no key; TURN has 1,000 GB of free egress a month, then $0.05 per GB; budget alerts only send email, and nothing caps spend for you. Enabling Realtime needs a card on file, which the docs never state but a community thread and Cloudflare's billing rule both say. So: STUN only through Phase 1, no card. Add the card the first time two friends cannot connect in Phase 2, before the Reddit post at the latest. The cap is ours: short-lived TURN credentials minted only for a matched pair, a monthly relay budget in the lobby that stops minting at 500 GB, and a $1 budget alert as the backstop. Research 03's numbers stand: an audio-only alpha cannot get near 1,000 GB. Details in D-82.</p>
+  <p>The plugin is a normal Claude Code plugin: a manifest, three commands, eight hooks, and a signal script, installed from a private marketplace for the alpha. Marketplaces, fun plugins, and the naming survey are in <a href="research/06-plugin-ecosystem-and-naming.md">research 06</a>.</p>
+</section>
+
+<section id="questions">
+  <h2>09 · Open questions</h2>
+  <p>None. Q-26 to Q-28 were answered on 2026-09-06: Pool, connect automatically, Geneva (D-78, D-79, D-81). Every question and answer is in <a href="QUESTIONS.md">QUESTIONS.md</a>.</p>
+  <p class="small">One action item for you remains: ten minutes searching r/ClaudeAI and r/cursor for anything like this. The card question is settled in section 08.</p>
+</section>
+
+<section id="decisions">
+  <h2>10 · Decision log</h2>
+  <p>Decisions since v0.3. The full log, D-01 onward, is in <a href="DECISIONS.md">DECISIONS.md</a>.</p>
+  <div class="tbl"><table class="decision">
+    <tr><th>ID</th><th>Decision</th><th>Status</th></tr>
+    <tr><td>D-42, D-47, D-59, D-60</td><td>Away-message voice; sounds; the Classic Mac OS lead; three synthesized sounds.</td><td>Accepted (your answers)</td></tr>
+    <tr><td>D-62</td><td>The window opens when you are queued, shaded; it unrolls when a stranger enters.</td><td>Accepted in principle; resize is a Phase 0 test</td></tr>
+    <tr><td>D-63</td><td>The window stays while queued; it shades back when the stranger leaves.</td><td>Accepted</td></tr>
+    <tr><td>D-64</td><td>Dot-screen video, CSS overlay first.</td><td>Accepted in principle; research 10</td></tr>
+    <tr><td>D-65</td><td>The log is five lines tall.</td><td>Accepted</td></tr>
+    <tr><td>D-66</td><td>Pastel tints chosen once; black lines everywhere.</td><td>Accepted in principle; hexes from research 09</td></tr>
+    <tr><td>D-67</td><td>The alpha is Chrome on macOS.</td><td>Accepted</td></tr>
+    <tr><td>D-68</td><td>One "open" per task; closing the window yourself means not this turn.</td><td>Accepted after review</td></tr>
+    <tr><td>D-69</td><td>A window whose Claude went quiet closes on its own, quickly.</td><td>Accepted after review</td></tr>
+    <tr><td>D-70</td><td>The count means other people.</td><td>Accepted after review</td></tr>
+    <tr><td>D-71</td><td>The focus test decides whether D-62 survives.</td><td>Accepted after review</td></tr>
+    <tr><td>D-72</td><td>Bar-graph audio meter in the spirit of Poolsuite's radio meter.</td><td>Proposed (your note)</td></tr>
+    <tr><td>D-57, D-64</td><td>Amended: the mic is captured at pick-up, not at load; the dot screen uses no blend mode.</td><td>Proposed</td></tr>
+    <tr><td>D-73</td><td>One window per task stays for the alpha; one per session is the fallback if the churn annoys.</td><td>Proposed</td></tr>
+    <tr><td>D-74</td><td>Shade geometry: 380 by 100 outer, resize verified in Chromium source; the PWA route is dropped.</td><td>Accepted</td></tr>
+    <tr><td>D-75</td><td>Pick up: one click on each side before any audio flows; a notification is the knock.</td><td>Superseded by D-79; kept as the fallback</td></tr>
+    <tr><td>D-76</td><td>Palette v2: Pool default, three more tints, Cyan and Blush fills, one highlight, one live dot.</td><td>Accepted (Q-26)</td></tr>
+    <tr><td>D-77</td><td>Eight 1-bit icons, text-only ledge buttons, two 28-bar meters, tight pixel type, double frame.</td><td>Proposed</td></tr>
+    <tr><td>D-78</td><td>Pool is the default tint.</td><td>Accepted (your answer)</td></tr>
+    <tr><td>D-79</td><td>Connect automatically: no pick-up click; turning the plugin on is the consent. Replaces D-75.</td><td>Accepted (your answer)</td></tr>
+    <tr><td>D-80</td><td>A quiet room shades back up after Q seconds with both meters at zero.</td><td>Proposed</td></tr>
+    <tr><td>D-81</td><td>Lines in Geneva; pixel type for title, labels, and the countdown digit.</td><td>Accepted (your answer)</td></tr>
+    <tr><td>D-82</td><td>STUN only until a pair fails to connect; then the card, with our own relay cap.</td><td>Proposed</td></tr>
+    <tr><td>D-83</td><td>Arm threshold 15 s, amending D-06. Provisional until Phase 0 logging.</td><td>Accepted (your answer)</td></tr>
+    <tr><td>D-84</td><td>The rehearsal rides the next hook: the real open path, not a popup.</td><td>Proposed</td></tr>
+  </table></div>
+</section>
+
+<section id="changes">
+  <h2>11 · Change log</h2>
+  <ul>
+    <li><strong>v0.5, 2026-09-06.</strong> Three answers folded in: Pool, automatic connect, Geneva. Knock state removed, quiet-room rule added, audio-with-no-click test made a gate. TURN billing verified and the card timing set. Threshold 15 s; the rehearsal rides the next hook. D-78 to D-84; D-75 superseded.</li>
+    <li><strong>v0.4, 2026-09-06.</strong> Six answers folded in. The window opens when queued, shaded, and stays while queued. Five-line log, dot-screen video, pastel tints, bar-graph meter, Chrome-only alpha. Review amendments: one open per task, quiet detection, count means others, mic on match, focus test decides. Research 09 and 10 folded in: final palette, icons, ledge buttons, meters, the pick-up click, the shade geometry. Mockup v2.2 replaces v2 on the canvas. D-62 to D-77. Q-26 to Q-28 opened.</li>
+    <li><strong>v0.3, 2026-09-06.</strong> Renamed to waiting-room. No home page, no kept window; self-opening room window; pauses as lines; Classic Mac OS design lead. D-38 to D-61.</li>
+    <li><strong>v0.2, 2026-09-06.</strong> Eleven answers; pause rule; 2009 look; D-27 to D-37.</li>
+    <li><strong>v0.1, 2026-09-05.</strong> Initial plan, four research memos, D-01 to D-26.</li>
+  </ul>
+  <p class="small">Full change log in <a href="CHANGELOG.md">CHANGELOG.md</a>.</p>
+</section>
+
+<section id="files">
+  <h2>12 · Files and sources</h2>
+  <div class="tbl"><table>
+    <tr><th>Path</th><th>What</th></tr>
+    <tr><td class="k">docs/index.html</td><td>This plan (v0.5). Older versions in docs/archive.</td></tr>
+    <tr><td class="k">docs/DECISIONS.md · QUESTIONS.md · CHANGELOG.md</td><td>Decision log, questions with your answers, change log.</td></tr>
+    <tr><td class="k">docs/research/01 to 10</td><td>Art lineage; plugin mechanics; free hosting and WebRTC; product history and safety; Omegle UI and 2009 web; plugin ecosystem and naming; retro chat-window design; auto-open window mechanics; Poolsuite color system and retro-modern principles; dot-screen video and the window shade.</td></tr>
+    <tr><td class="k">design/</td><td>Mockup v2.3 working files, generator, and the font. v1 archived under design/v1-wait-together.</td></tr>
+    <tr><td class="k">prototype/plugin/</td><td>Plugin skeleton: manifest, three commands, eight hooks, toggle and signal scripts. Validates strict.</td></tr>
+    <tr><td class="k">artifacts</td><td><a href="https://claude.ai/code/artifact/7f5e1d8a-4c07-46ab-9506-507936b4ff27">This plan</a> · <a href="https://claude.ai/code/artifact/447cf200-0465-4dcf-8ff0-984537a43877">Design canvas</a></td></tr>
+  </table></div>
+</section>
+
+<footer>waiting-room · plan v0.5 · 2026-09-06 · Omegle is the joke and the reference, not the name, the logo, or the words. Poolsuite is the taste reference, not the assets.</footer>
+</main>
+</div>
+</body>
+</html>
