@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #DDDDDD; }
+    a { color: #0000EE; } a:hover { color: #551A8B; }
+    * { box-sizing: border-box; }
+    /* Dimensions for IE: */
+    .logwrapper { _width: 96%; _height: 250px; }
+  </style>
+</helmet>
+<div style="width:720px;height:580px;background:#EEEEEE;position:relative;overflow:hidden;font:16px/1.5 Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#000;border:1px solid #AAA;">
+  <div style="height:24px;background:linear-gradient(#E8E8E8,#C9C9C9);border-bottom:1px solid #9C9C9C;display:flex;align-items:center;padding:0 8px;gap:6px;">
+    <span style="width:11px;height:11px;border-radius:50%;background:#EC6A5E;border:1px solid #C9483C;display:inline-block;"></span>
+    <span style="width:11px;height:11px;border-radius:50%;background:#F4BF4F;border:1px solid #C69A2E;display:inline-block;"></span>
+    <span style="width:11px;height:11px;border-radius:50%;background:#61C554;border:1px solid #3E9B33;display:inline-block;"></span>
+    <span style="flex:1;text-align:center;font:11px 'Lucida Grande', 'Lucida Sans Unicode', 'Segoe UI', sans-serif;color:#333;margin-right:45px;">wait-together</span>
+  </div>
+  <div style="position:absolute;left:16px;width:372px;top:32px;height:40px;display:flex;justify-content:space-between;align-items:center;">
+    <span style="display:inline-flex;align-items:baseline;gap:0.5em;"><span style="font:bold 1.25em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#0180FE;letter-spacing:-0.02em;">wait-together</span><span style="font:0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;background:#f9f6ba;padding:0 0.3em;">beta</span></span><span style="font:bold 0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#555555;">Claude working 1:12</span>
+  </div>
+  <div class="logwrapper" style="position:absolute;left:16px;top:80px;width:372px;height:396px;background:#fff;border:1px solid #CCCCCC;border-radius:0.5em 0.5em 0 0;padding:0.5em 0.5em 0 0.5em;overflow:hidden;">
+    <div style="padding-bottom:0.5em;font:bold 0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#555555;">Connecting to the lobby...</div><div style="padding-bottom:0.5em;font:bold 0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#555555;">Waiting for someone to wait for their Claude. Hang on.</div>
+  </div>
+  <div style="position:absolute;left:16px;bottom:16px;width:372px;height:80px;display:flex;align-items:stretch;">
+    <span style="display:inline-block;border:1px solid #CCCCCC;background:#fff;border-bottom-left-radius:0.5em;"><span style="display:inline-flex;align-items:center;justify-content:center;width:6em;height:78px;font:1em sans-serif;color:#000;border-bottom-left-radius:0.5em;">Stop waiting</span></span>
+    <div style="flex:1;margin:0 0.5em;background:#fff;border:1px solid #CCCCCC;padding:0.5em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.35em;">
+      <span style="display:inline-block;padding:0.45em 0.8em;border:0;border-radius:3px;background:linear-gradient(to bottom,#BFBFBF 0%,#818181 100%);color:#fff;font:0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;cursor:default;">Show my video</span>
+      <span style="font:0.8em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:#555555;"><span style="color:#AAA;">Mute</span></span>
+    </div>
+    <span style="display:inline-block;border:1px solid #CCCCCC;background:#fff;border-bottom-right-radius:0.5em;"><span style="display:inline-flex;align-items:center;justify-content:center;width:6em;height:78px;font:1em sans-serif;color:#AAA;border-bottom-right-radius:0.5em;">Report</span></span>
+  </div>
+  <div style="position:absolute;right:16px;top:32px;width:300px;">
+    <div style="position:relative;width:300px;height:225px;background:#000;"><div style="width:300px;height:225px;background:#E4E4E4;"></div></div><div style="height:20px;display:flex;justify-content:space-between;align-items:center;padding:0 2px;font:bold 0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:red;"><span>Stranger</span><span style="display:inline-flex;align-items:flex-end;height:16px;"><span style="display:inline-block;width:5px;height:3px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:5px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:7px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:9px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:11px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:13px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:15px;background:#D0D0D0;margin-right:2px;"></span></span></div><div style="position:relative;width:300px;height:225px;background:#000;"><div style="width:300px;height:225px;background:#E4E4E4;"></div></div><div style="height:20px;display:flex;justify-content:space-between;align-items:center;padding:0 2px;font:bold 0.9em Arial, 'Helvetica Neue', Helvetica, sans-serif;color:blue;"><span>You</span><span style="display:inline-flex;align-items:flex-end;height:16px;"><span style="display:inline-block;width:5px;height:3px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:5px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:7px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:9px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:11px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:13px;background:#D0D0D0;margin-right:2px;"></span><span style="display:inline-block;width:5px;height:15px;background:#D0D0D0;margin-right:2px;"></span></span></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

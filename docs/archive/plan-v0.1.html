@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-omegle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&family=Martian+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#151C26; --muted:#5A6675; --line:#CDD4DC;
+  --you:#1F4FD8; --you-soft:#DCE5FB; --them:#C9432B; --them-soft:#F8E0DA;
+  --work:#D7DDE5; --work-ink:#3E4A58; --code-bg:#E4E9F0; --warn:#B7791F; --warn-soft:#FBF0DA;
+  --mono:"Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --serif:"Literata", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F141A; --surface:#161C24; --ink:#E5E9EE; --muted:#96A1AD; --line:#2A333E;
+    --you:#7C9EFF; --you-soft:#1D2A4D; --them:#FF8A73; --them-soft:#4A241C;
+    --work:#2A333E; --work-ink:#B8C2CD; --code-bg:#1C242E; --warn:#E0A94A; --warn-soft:#3A2E16;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F141A; --surface:#161C24; --ink:#E5E9EE; --muted:#96A1AD; --line:#2A333E;
+  --you:#7C9EFF; --you-soft:#1D2A4D; --them:#FF8A73; --them-soft:#4A241C;
+  --work:#2A333E; --work-ink:#B8C2CD; --code-bg:#1C242E; --warn:#E0A94A; --warn-soft:#3A2E16;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.6;font-variation-settings:"opsz" 14}
+a{color:var(--you);text-decoration-thickness:1px;text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--you);outline-offset:2px}
+.page{max-width:1180px;margin:0 auto;padding:36px 24px 80px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px}
+@media (max-width:900px){.page{grid-template-columns:1fr;gap:24px;padding:20px 16px 60px}}
+/* rail */
+.rail{position:sticky;top:20px;align-self:start;font-family:var(--mono);font-size:11.5px;line-height:1.5}
+.rail .brand{font-weight:600;font-size:12px;letter-spacing:.02em;margin-bottom:4px}
+.rail .sub{color:var(--muted);margin-bottom:18px}
+.rail nav a{display:block;color:var(--ink);text-decoration:none;padding:4px 0;border-top:1px solid var(--line)}
+.rail nav a:last-child{border-bottom:1px solid var(--line)}
+.rail nav a:hover{color:var(--you)}
+.rail nav .n{display:inline-block;width:2.2em;color:var(--muted)}
+@media (max-width:900px){.rail{position:static}.rail nav{display:flex;flex-wrap:wrap;gap:4px 14px}.rail nav a{border:0;padding:2px 0}}
+/* main */
+main{max-width:840px;min-width:0}
+h1{font-family:var(--serif);font-weight:600;font-size:40px;line-height:1.1;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance;font-variation-settings:"opsz" 72}
+.lede{font-size:20px;line-height:1.45;color:var(--ink);max-width:36em;margin:10px 0 0;font-variation-settings:"opsz" 24}
+.meta{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin:16px 0 0;display:flex;flex-wrap:wrap;gap:6px 18px}
+h2{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.2;margin:64px 0 14px;text-wrap:balance;font-variation-settings:"opsz" 48;scroll-margin-top:24px}
+h3{font-family:var(--serif);font-weight:600;font-size:18.5px;line-height:1.3;margin:30px 0 8px;text-wrap:balance}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+p{max-width:68ch;margin:0 0 14px}
+ul,ol{max-width:68ch;padding-left:1.3em;margin:0 0 14px}
+li{margin:0 0 6px}
+li::marker{color:var(--muted)}
+strong{font-weight:600}
+em{font-style:italic}
+hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+code{font-family:var(--mono);font-size:.82em;background:var(--code-bg);padding:1px 5px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.55;background:var(--code-bg);padding:14px 16px;border-radius:4px;overflow-x:auto;margin:0 0 16px;max-width:100%}
+pre code{background:none;padding:0;font-size:inherit}
+.tldr{background:var(--surface);border:1px solid var(--line);padding:18px 22px;margin:28px 0 0}
+.tldr ul{margin:0;max-width:none}
+.tldr li{margin-bottom:8px}
+.tbl{overflow-x:auto;margin:0 0 18px;background:var(--surface);border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.45}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.k{font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--work-ink)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{border-left:3px solid var(--you);background:var(--surface);padding:12px 16px;margin:0 0 18px;max-width:72ch}
+.note p:last-child{margin-bottom:0}
+.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:2px 8px;border:1px solid var(--line);border-radius:999px;white-space:nowrap;color:var(--work-ink)}
+.chip.you{border-color:var(--you);color:var(--you)}
+.chip.them{border-color:var(--them);color:var(--them)}
+figure{margin:26px 0 30px;background:var(--surface);border:1px solid var(--line);padding:18px 18px 12px}
+figure svg{display:block;max-width:100%;height:auto;color:var(--ink)}
+figcaption{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:10px;max-width:80ch}
+.sv-work{fill:var(--work)}
+.sv-you{fill:var(--you)}
+.sv-you-soft{fill:var(--you-soft)}
+.sv-them{fill:var(--them)}
+.sv-box{fill:var(--surface);stroke:currentColor;stroke-width:1.2}
+.sv-lobby{fill:var(--you-soft);stroke:var(--you);stroke-width:1.4}
+.sv-t{font-family:var(--mono);font-size:11px;fill:currentColor}
+.sv-t.mu{fill:var(--muted)}
+.sv-t.you{fill:var(--you)}
+.sv-t.them{fill:var(--them)}
+.sv-t.b{font-weight:600;font-size:12px}
+.sv-l{stroke:currentColor;stroke-width:1.2;fill:none}
+.sv-l.you{stroke:var(--you)}
+.sv-l.dash{stroke-dasharray:4 4}
+.qa dt{font-weight:600;margin:18px 0 4px;font-size:17.5px}
+.qa dd{margin:0 0 4px;max-width:68ch}
+.qa{margin:0 0 10px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:0 0 18px}
+.card{background:var(--surface);border:1px solid var(--line);padding:14px 16px}
+.card h4{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.card p,.card ul{font-size:15px;margin-bottom:8px}
+.card ul{padding-left:1.1em}
+.card p:last-child,.card ul:last-child{margin-bottom:0}
+.small{font-size:14.5px;color:var(--muted)}
+.decision td:first-child{font-family:var(--mono);font-size:12px;white-space:nowrap}
+.q-default{display:block;margin-top:4px;font-family:var(--mono);font-size:12px;color:var(--work-ink)}
+footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.6}
+@media (prefers-reduced-motion: no-preference){html{scroll-behavior:smooth}}
+</style>
+</head>
+<body>
+<div class="page">
+<aside class="rail">
+  <div class="brand">claude-omegle</div>
+  <div class="sub">plan v0.1<br>2026-09-05</div>
+  <nav aria-label="Sections">
+    <a href="#tldr"><span class="n">00</span>Summary</a>
+    <a href="#asked"><span class="n">01</span>What you asked</a>
+    <a href="#concept"><span class="n">02</span>Concept review</a>
+    <a href="#how"><span class="n">03</span>How it works</a>
+    <a href="#plan"><span class="n">04</span>Build plan</a>
+    <a href="#edges"><span class="n">05</span>Edge cases</a>
+    <a href="#cost"><span class="n">06</span>Free tier and cost</a>
+    <a href="#thinking"><span class="n">07</span>Systems and design thinking</a>
+    <a href="#questions"><span class="n">08</span>Questions for David</a>
+    <a href="#decisions"><span class="n">09</span>Decision log</a>
+    <a href="#changes"><span class="n">10</span>Change log</a>
+    <a href="#files"><span class="n">11</span>Files and sources</a>
+  </nav>
+</aside>
+
+<main>
+<header>
+  <span class="eyebrow">Concept review and build plan</span>
+  <h1>claude-omegle</h1>
+  <p class="lede">While your Claude works, you are on a call with a stranger whose Claude is also working. When either Claude finishes, the call ends. Every wait, a different stranger.</p>
+  <div class="meta">
+    <span>Working title. See Q-01.</span>
+    <span>Written 2026-09-05</span>
+    <span>Claude Code 2.1.261 verified</span>
+    <span>4 research memos, linked in section 11</span>
+  </div>
+</header>
+
+<section id="tldr">
+  <div class="tldr">
+    <span class="eyebrow">Summary</span>
+    <ul>
+      <li><strong>The idea holds up, and nobody has built it.</strong> About fifteen Claude Code plugins already fill agent wait time with games, pets, or music. All of them are solo. Two Zoom patents describe the same mechanic for call-centre queues. The specific fusion, a stranger matched by "Claude is working" and released by "Claude is done", is unoccupied.</li>
+      <li><strong>Its best idea is the blameless exit.</strong> Omegle's "Next" was a rejection. A hang-up that a machine imposes leaves nobody rejected. But it needs a floor: a call cut after forty seconds feels worse than being skipped. So short turns never trigger a call, and the threshold is measured from your own usage, not guessed.</li>
+      <li><strong>It can be built small and run for $0.</strong> A plugin with six hooks and one command, one static web page, and one Cloudflare Worker with one Durable Object, the same pattern as your Mist Maker relay. Media goes browser to browser. Cost stays at zero up to roughly 4,400 calls a day.</li>
+      <li><strong>The hard parts are not technical.</strong> Two Claudes rarely overlap in a small group, so "waiting alone" must be the good default state. And video with strangers always needs a safety story, so the MVP is invite-only, audio-first with a mutual "show video" click, with skip limits and a kill switch from day one.</li>
+      <li><strong>Start with one hour of instrumentation</strong> (Phase 0) before writing any product code: log your own turn start and stop times for a week. That one dataset sets the two numbers the whole design depends on.</li>
+    </ul>
+  </div>
+
+  <figure>
+    <svg viewBox="-30 0 800 272" role="img" aria-label="Timeline of one wait. Your Claude works for six and a half minutes. Stranger A's Claude works from minute 0:45 to 3:00, producing a call from 1:15 to 3:00 that ends when A's Claude finishes. Stranger B's Claude starts at 3:30, producing a second call from 4:00 to 6:30 that ends when your Claude finishes.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <!-- call bands (behind) -->
+      <rect x="188" y="42" width="165" height="96" rx="4" class="sv-you-soft"/>
+      <rect x="447" y="42" width="236" height="36" rx="4" class="sv-you-soft"/>
+      <rect x="447" y="162" width="236" height="36" rx="4" class="sv-you-soft"/>
+      <!-- row labels -->
+      <text x="60" y="65" text-anchor="end" class="sv-t b you">You</text>
+      <text x="60" y="125" text-anchor="end" class="sv-t b them">Stranger A</text>
+      <text x="60" y="185" text-anchor="end" class="sv-t b them">Stranger B</text>
+      <!-- working bars -->
+      <rect x="70" y="49" width="613" height="22" rx="2" class="sv-work"/>
+      <rect x="141" y="109" width="212" height="22" rx="2" class="sv-work"/>
+      <rect x="400" y="169" width="330" height="22" rx="2" class="sv-work"/>
+      <!-- call overlays on bars -->
+      <rect x="188" y="49" width="165" height="22" rx="2" class="sv-you"/>
+      <rect x="188" y="109" width="165" height="22" rx="2" class="sv-you"/>
+      <rect x="447" y="49" width="236" height="22" rx="2" class="sv-you"/>
+      <rect x="447" y="169" width="236" height="22" rx="2" class="sv-you"/>
+      <!-- threshold ticks -->
+      <line x1="117" y1="44" x2="117" y2="76" class="sv-l"/>
+      <line x1="188" y1="104" x2="188" y2="136" class="sv-l"/>
+      <line x1="447" y1="164" x2="447" y2="196" class="sv-l"/>
+      <!-- bar labels -->
+      <text x="72" y="40" class="sv-t mu">your Claude working</text>
+      <text x="143" y="100" class="sv-t mu">their Claude working</text>
+      <text x="402" y="160" class="sv-t mu">their Claude working</text>
+      <text x="270" y="64" text-anchor="middle" class="sv-t" style="fill:var(--bg);font-weight:600">call 1</text>
+      <text x="565" y="64" text-anchor="middle" class="sv-t" style="fill:var(--bg);font-weight:600">call 2</text>
+      <!-- hang-up markers -->
+      <line x1="353" y1="42" x2="353" y2="138" class="sv-l dash"/>
+      <text x="356" y="36" class="sv-t">A's Claude done: hang up</text>
+      <line x1="683" y1="42" x2="683" y2="210" class="sv-l dash"/>
+      <text x="680" y="212" text-anchor="end" class="sv-t">your Claude done: hang up</text>
+      <text x="688" y="185" class="sv-t mu">B waits on</text>
+      <!-- axis -->
+      <line x1="70" y1="228" x2="730" y2="228" class="sv-l"/>
+      <g class="sv-t mu">
+        <line x1="70" y1="228" x2="70" y2="233" class="sv-l"/><text x="70" y="246" text-anchor="middle">0 min</text>
+        <line x1="164" y1="228" x2="164" y2="233" class="sv-l"/><text x="164" y="246" text-anchor="middle">1</text>
+        <line x1="259" y1="228" x2="259" y2="233" class="sv-l"/><text x="259" y="246" text-anchor="middle">2</text>
+        <line x1="353" y1="228" x2="353" y2="233" class="sv-l"/><text x="353" y="246" text-anchor="middle">3</text>
+        <line x1="447" y1="228" x2="447" y2="233" class="sv-l"/><text x="447" y="246" text-anchor="middle">4</text>
+        <line x1="541" y1="228" x2="541" y2="233" class="sv-l"/><text x="541" y="246" text-anchor="middle">5</text>
+        <line x1="636" y1="228" x2="636" y2="233" class="sv-l"/><text x="636" y="246" text-anchor="middle">6</text>
+        <line x1="730" y1="228" x2="730" y2="233" class="sv-l"/><text x="730" y="246" text-anchor="middle">7</text>
+      </g>
+      <!-- legend -->
+      <rect x="70" y="255" width="14" height="6" class="sv-work"/><text x="90" y="261" class="sv-t mu">Claude working</text>
+      <rect x="205" y="255" width="14" height="6" class="sv-you"/><text x="225" y="261" class="sv-t mu">call</text>
+      <line x1="280" y1="252" x2="280" y2="262" class="sv-l"/><text x="288" y="261" class="sv-t mu">threshold passed (30 s here)</text>
+    </svg>
+    <figcaption>One wait, two strangers. A call exists only where two "Claude working" spans overlap after each person has passed the threshold. Each call ends when one Claude finishes. Nobody presses a button. The person left behind goes back to waiting.</figcaption>
+  </figure>
+</section>
+
+<section id="asked">
+  <h2>01 · What you asked, answered plainly</h2>
+  <dl class="qa">
+    <dt>How does a Claude Code plugin work?</dt>
+    <dd>A plugin is a folder with a small manifest. It can add slash commands, skills, agents, MCP servers, and <strong>hooks</strong>. A hook is a shell command that Claude Code runs at a lifecycle moment (prompt submitted, tool used, turn finished, session ended) and feeds a JSON description of that moment on stdin. This project needs only hooks and one command. Hooks run silently and can be marked <code>async</code> so Claude never waits on them. Two facts that shape the design: plugin hooks are installed <em>without</em> an approval prompt, so the plugin ships disabled and you turn it on with a command; and the <code>Stop</code> hook does <em>not</em> fire when you press Escape, so the web side needs its own timeout.</dd>
+
+    <dt>How does one know how long the response will take?</dt>
+    <dd>One doesn't, and the plugin never tries. Claude Code has no duration estimate and no timestamp in any hook payload. What it does give is an exact <em>start</em> (the prompt is submitted) and an exact <em>end</em> (the turn stops). So the design observes instead of predicting: a call only opens after Claude has already been working for a threshold (placeholder 30 s), because turns that pass that point tend to be the long, agentic ones. The threshold comes from a week of your own logged turns (Phase 0). Reported waits in the community range from ten seconds to twelve minutes, so the distribution is wide and two-humped.</dd>
+
+    <dt>How do we get permission to open a call to a stranger?</dt>
+    <dd>Three layers, none of them silent. (1) Installing the plugin and running <code>/claude-omegle:omegle on</code> is explicit opt-in per machine. (2) The web page shows a rules screen once, and an Available / Away switch always; closing the tab is the off switch. (3) The browser's own camera and microphone prompt, per site. The first click on the rules screen also satisfies the browser's "user gesture" rule for playing the stranger's audio. Between calls, the camera light is off. Nothing about your prompts or code ever leaves the machine.</dd>
+
+    <dt>Can it be free, with a free server and backend?</dt>
+    <dd>Yes. Static page and signaling run on the Cloudflare Workers free plan with one Durable Object, which is exactly what your Mist Maker relay already does. Audio and video go directly between the two browsers. The only paid-looking piece is the relay some networks need (TURN), and Cloudflare gives 1,000 GB a month of it free. At a hundred five-minute calls a day the bill is $0, and the first cent arrives around 4,400 calls a day. One thing to confirm in your dashboard: whether a free account can create a TURN key without a card on file. If not, Metered's Open Relay gives 20 GB a month free.</dd>
+
+    <dt>What does the MVP look like?</dt>
+    <dd>A plugin (six hooks, one command, a pairing token), one web page (rules, waiting alone, in call, goodbye), and one Worker with one Lobby object (queue, pairing, signaling, timeouts, invite code, ban list, kill switch). Audio first, video by mutual click. Skip, Report, Away. A live count of who is online. Invite-only. Roughly 200 lines of Worker, 400 lines of page, 60 lines of plugin. Section 04 has the scope fence.</dd>
+
+    <dt>What systems thinking is needed?</dt>
+    <dd>Two things. A <strong>state machine</strong> for the tab, because the "Claude is working" signal is unreliable at the edges and every state needs a way home. And a <strong>liquidity model</strong>, because a matching product only works above a critical number of people online at the same moment. Section 07 works both out with numbers.</dd>
+  </dl>
+</section>
+
+<section id="concept">
+  <h2>02 · Concept review</h2>
+  <p>Full research with sources is in <a href="research/01-art-theory-lineage.md">memo 01</a> (art, games, theory) and <a href="research/04-product-history-and-safety.md">memo 04</a> (product history, safety, law). This section is the digest.</p>
+
+  <h3>The lineage it sits in</h3>
+  <div class="tbl"><table>
+    <tr><th>Work</th><th>What it did</th><th>What it lends claude-omegle</th></tr>
+    <tr><td><strong>Hole in Space</strong>, Galloway and Rabinowitz, 1980</td><td>Unannounced life-size video link between a New York storefront and an LA mall for three nights. No signs, no credits, and deliberately no self-view.</td><td>Proof that an unexplained window between strangers is enough. Its three-night arc (confusion, then performance, then reunions) is a lifecycle forecast for your first weeks. Consider hiding the self-view.</td></tr>
+    <tr><td><strong>Portals</strong>, Shared_Studios, 2014 on</td><td>Gold shipping containers linking cities, staffed, eight-minute conversations opened with one question.</td><td>An opening prompt rescues an agenda-less encounter. Duration was chosen to be bearable. Yours is chosen by a compile, which is the concept's central open problem.</td></tr>
+    <tr><td><strong>New York–Dublin Portal</strong>, 2024</td><td>24-hour public video link, no audio. Broken within five days by a tiny minority. Reopened with proximity-triggered blur, shorter hours, security.</td><td>The moderation model to copy: automatic, mechanical, blameless interventions rather than human judgment.</td></tr>
+    <tr><td><strong>Omegle</strong>, 2009–2023</td><td>Anonymous random chat, video by default, instant "Next". Shut down after a product-liability suit survived Section 230 because the <em>matching design</em> was the alleged defect.</td><td>What not to be: no accounts, camera-first, infinite re-roll, minors present. Your exposure is the design of the matcher, not what users say.</td></tr>
+    <tr><td><strong>Focusmate</strong>, 2018 on</td><td>Book a 25 to 75 minute slot, get a stranger on video, state a goal, work in silence, check out. Twelve million sessions, self-reported.</td><td>The behaviour is proven and sustainable. Steal the ritual (greet, say what you are waiting on, work, goodbye). The novel move is that your timer is set by a machine.</td></tr>
+    <tr><td><strong>Journey</strong>, 2012, and <strong>Kind Words</strong>, 2019</td><td>Strangers with no names, no text, no voice, only a chirp. Kind Words removed the reply loop and trolling nearly vanished without moderators.</td><td>Restrict the channel before you widen it. A thin channel still registers as another human and cannot carry hostility.</td></tr>
+    <tr><td><strong>Relational Aesthetics</strong>, Bourriaud 1998, and Bishop's critique, 2004</td><td>Art as encounters between people. Bishop: "what types of relations are being produced, for whom, and why?" The comfortable microtopia excludes.</td><td>Your users are paying Claude Code developers in a few time zones. Name that, or add friction (a machine-set topic, cross-pairing) so the encounter is not only cozy.</td></tr>
+    <tr><td><strong>Delayed Response</strong>, Farman 2018, and Alexander on buffering, 2017</td><td>Waiting is a medium that communicates. Who makes you wait is a statement about power. The buffer is where infrastructure becomes visible.</td><td>The thesis sentence: the wait is not the absence of the experience, it is the experience. In agentic coding the machine now makes the human wait, which is new and worth naming.</td></tr>
+    <tr><td><strong>Simmel's stranger</strong>, 1908, and the "stranger on a train" research</td><td>People confide in strangers who will move on, more than in intimates.</td><td>Non-recurrence is the enabling condition of candour, not a defect. The design should never add history, ratings, or streaks.</td></tr>
+    <tr><td><strong>xkcd 303 "Compiling"</strong>, 2007, and the Namco loading-screen patent, 1995–2015</td><td>Machine wait time as licensed social time; a patent that kept loading-screen games rare for twenty years.</td><td>The cultural ancestor of the premise. And a warning: "obvious, easy, and nobody did it" usually means a structural blocker. Here it is liability and liquidity, not imagination.</td></tr>
+  </table></div>
+
+  <h3>Prior art: the exact idea is unoccupied</h3>
+  <p>Searches across GitHub, Hacker News, and the open web found no project that pairs two humans because both their agents are busy. What exists nearby:</p>
+  <ul>
+    <li><strong>Solo wait-fillers for Claude Code</strong> (while-you-wait, claudemon, waitingfor.ai, elevator-music, several arcades, desktop pets, even an ad network that pays you while Claude works). Same trigger, same hook plumbing, no person. This is the real competitive set and the honest claim: everyone fills the wait with content, nobody fills it with someone.</li>
+    <li><strong>coderoulette</strong>: pair-program with a stranger and one shared agent for 30 minutes. Terminal only, demand-triggered. Its three-minute no-fault re-match is worth borrowing.</li>
+    <li><strong>Zoom patents</strong> US 11,936,813 B2 and US 11,627,224 B1: collaborative virtual waiting rooms where strangers socialise until an agent picks up. Same mechanic, call-centre domain. Not legal advice, but worth knowing about before anything public.</li>
+    <li><strong>Claude Code's own spinner verbs</strong> ("Pondering", "Marinating", 187 of them, user-customisable) are already a beloved loading-screen art practice. The wait is not blank territory; this is a new move inside an existing genre.</li>
+    <li>Reddit could not be searched by the research agents. Worth ten minutes of manual checking in r/ClaudeAI and r/cursor.</li>
+  </ul>
+
+  <h3>Six things the concept should absorb</h3>
+  <ol>
+    <li><strong>The blameless exit needs a floor.</strong> Below about a minute, a machine hang-up reads as an insult. Hence the threshold, the goodbye countdown, and a Phase 0 that measures how often a turn that passes 30 s goes on to pass 3 min.</li>
+    <li><strong>Waiting alone is the normal case.</strong> With twenty users, two Claudes overlapping is rare. The solo screen (your Claude's elapsed time, who is online, a live count that is never faked) must be worth keeping open on its own.</li>
+    <li><strong>Restrict the channel first.</strong> Audio with a mutual click for video is cheaper, safer, and closer to what people want during focused work. Try the Journey-style thin version (video on, mic off, a wave) as a Phase 3 experiment.</li>
+    <li><strong>The Portal shape of moderation.</strong> Mechanical, automatic, blameless: rate-limited skips, a hard cap on call length, one-click block, kill switch. Not a human queue you cannot staff.</li>
+    <li><strong>Design against obligation.</strong> Benjamin's boredom is where experience hatches; Bogost's social games "abuse us while we are away from them". Default off, easy to skip, no streaks, no scores, no history.</li>
+    <li><strong>Give the encounter one question.</strong> Portals opened with "What would make today a good day for you?" Yours can open with the one thing both people share: "What is your Claude doing?"</li>
+  </ol>
+
+  <h3>Honest weaknesses</h3>
+  <ul>
+    <li><strong>Cold start is severe.</strong> This needs many people waiting at the same moment. A plugin with a hundred users will mostly produce empty rooms. Office hours and an honest live count are the cheapest fixes; see section 07.</li>
+    <li><strong>Liability is out of proportion to a hobby project</strong> if it goes public with video. Invite-only is the primary legal mitigation, not a product preference. Omegle's fate turned on matcher design, which Section 230 did not cover.</li>
+    <li><strong>The name.</strong> Omegle is a trademark with a dark legacy, and omegle.com is live again under a new owner, so "claude-omegle" now points at someone else's product. Candidates from the research: <em>Meanwhile</em>, <em>Long Poll</em>, <em>Yield</em>, <em>Blocking</em>, <em>Interstice</em>, <em>Standby</em>, with "civil inattention" as a tagline. My pick is Meanwhile: plain, warm, describes the thing exactly, and <code>/meanwhile on</code> reads well.</li>
+  </ul>
+</section>
+
+<section id="how">
+  <h2>03 · How it works</h2>
+  <p>Three pieces, and each one is small. The terminal only ever says two words to the outside world, "started" and "stopped" (plus a heartbeat). The lobby does the pairing. The two browser tabs talk to each other directly.</p>
+
+  <figure>
+    <svg viewBox="0 0 1040 316" role="img" aria-label="Pipeline: your terminal's hooks post start, stop, and tick events to a Cloudflare Worker with a Lobby Durable Object; the Lobby pushes state, matches, and WebRTC signaling over WebSockets to your browser tab and the stranger's tab; audio and video flow peer to peer between the two tabs.">
+      <defs>
+        <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <!-- terminals -->
+      <rect x="20" y="40" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="130" y="66" text-anchor="middle" class="sv-t b">Your terminal</text>
+      <text x="130" y="86" text-anchor="middle" class="sv-t mu">Claude Code + plugin hooks</text>
+      <rect x="800" y="40" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="910" y="66" text-anchor="middle" class="sv-t b">Stranger's terminal</text>
+      <text x="910" y="86" text-anchor="middle" class="sv-t mu">Claude Code + plugin hooks</text>
+      <!-- lobby -->
+      <rect x="410" y="40" width="220" height="64" rx="4" class="sv-lobby"/>
+      <text x="520" y="66" text-anchor="middle" class="sv-t b you">Cloudflare Worker</text>
+      <text x="520" y="86" text-anchor="middle" class="sv-t you">Lobby Durable Object</text>
+      <text x="520" y="124" text-anchor="middle" class="sv-t mu">free plan, no database</text>
+      <!-- terminal -> lobby -->
+      <line x1="242" y1="72" x2="408" y2="72" class="sv-l" marker-end="url(#ah2)"/>
+      <text x="325" y="60" text-anchor="middle" class="sv-t">start · stop · tick</text>
+      <text x="325" y="92" text-anchor="middle" class="sv-t mu">curl, async, 2 s</text>
+      <line x1="798" y1="72" x2="632" y2="72" class="sv-l" marker-end="url(#ah2)"/>
+      <text x="715" y="60" text-anchor="middle" class="sv-t">start · stop · tick</text>
+      <text x="715" y="92" text-anchor="middle" class="sv-t mu">curl, async, 2 s</text>
+      <!-- tabs -->
+      <rect x="20" y="200" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="130" y="226" text-anchor="middle" class="sv-t b">Your browser tab</text>
+      <text x="130" y="246" text-anchor="middle" class="sv-t mu">one page, stays open</text>
+      <rect x="800" y="200" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="910" y="226" text-anchor="middle" class="sv-t b">Stranger's browser tab</text>
+      <text x="910" y="246" text-anchor="middle" class="sv-t mu">one page, stays open</text>
+      <!-- lobby <-> tabs -->
+      <line x1="460" y1="106" x2="130" y2="198" class="sv-l you" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+      <text x="150" y="146" text-anchor="middle" class="sv-t you">WebSocket</text>
+      <text x="150" y="160" text-anchor="middle" class="sv-t mu">state · match · signaling</text>
+      <line x1="580" y1="106" x2="910" y2="198" class="sv-l you" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+      <text x="890" y="146" text-anchor="middle" class="sv-t you">WebSocket</text>
+      <text x="890" y="160" text-anchor="middle" class="sv-t mu">state · match · signaling</text>
+      <!-- p2p -->
+      <line x1="242" y1="232" x2="798" y2="232" class="sv-l dash" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+      <text x="520" y="224" text-anchor="middle" class="sv-t">audio + video, browser to browser</text>
+      <text x="520" y="250" text-anchor="middle" class="sv-t mu">STUN first; TURN relay only when needed</text>
+      <text x="520" y="290" text-anchor="middle" class="sv-t mu">Nothing from the session (prompt, code, transcript) leaves the terminal.</text>
+      <text x="520" y="305" text-anchor="middle" class="sv-t mu">Only event names, a pairing token, and a hashed session id.</text>
+    </svg>
+    <figcaption>The terminal never opens a browser and never blocks. Hooks post a two-word event and forget it. The lobby holds the queue and relays signaling; media never touches it.</figcaption>
+  </figure>
+
+  <h3>A call, in words</h3>
+  <ol>
+    <li>Once: install the plugin, run <code>/claude-omegle:omegle on</code>. It creates a random pairing token on your machine and prints a URL. You open it, read the rules, click Available. The tab stays open, connected to the lobby.</li>
+    <li>You give Claude a task. The <code>UserPromptSubmit</code> hook posts "started" with your token. The tab shows your Claude's elapsed time and starts a 30 s timer.</li>
+    <li>If Claude finishes before the timer, nothing happens. You never see a call for a quick answer.</li>
+    <li>If the timer passes, the tab joins the queue. The lobby shows you an honest count: "4 online, 1 waiting". If nobody else is waiting, you wait alone with your Claude's clock. This is the normal case.</li>
+    <li>Someone else's Claude passes their threshold. The lobby pairs you, tells each tab who is "polite" (a WebRTC role), and hands out short-lived relay credentials. The two tabs exchange offer, answer, and ICE through the lobby, and audio connects. A chime and a flashing tab title get your attention. Both of you see both Claudes' elapsed time and a small pulse whenever either Claude uses a tool.</li>
+    <li>Either of you can click "show video"; it turns on only when both have clicked. Either can Skip (rate-limited) or Report (ends the call, logs the pair).</li>
+    <li>Your Claude finishes. The <code>Stop</code> hook posts "stopped". Your tab shows a five-second goodbye, hangs up, and returns to idle. The stranger sees "their Claude finished" and goes back to waiting.</li>
+  </ol>
+
+  <figure>
+    <svg viewBox="0 0 900 262" role="img" aria-label="State machine of the browser tab: Idle to Armed on start; Armed back to Idle if stop arrives before the threshold; Armed to Waiting when the threshold passes; Waiting to Connecting on match; Connecting to In call when media is up, or back to Waiting on failure; In call to Goodbye on your stop, or back to Waiting when the peer leaves; Goodbye to Idle after five seconds; any state to Idle after a timeout without signals.">
+      <defs>
+        <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <!-- top return: Goodbye -> Idle -->
+      <path d="M800,58 L800,28 L75,28 L75,58" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="437" y="22" text-anchor="middle" class="sv-t mu">after 5 s: hang up, camera released</text>
+      <!-- states -->
+      <rect x="20" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="75" y="87" text-anchor="middle" class="sv-t b">Idle</text>
+      <rect x="165" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="220" y="87" text-anchor="middle" class="sv-t b">Armed</text>
+      <rect x="310" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="365" y="87" text-anchor="middle" class="sv-t b">Waiting</text>
+      <rect x="455" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="510" y="87" text-anchor="middle" class="sv-t b">Connecting</text>
+      <rect x="600" y="60" width="110" height="44" rx="22" class="sv-lobby"/><text x="655" y="87" text-anchor="middle" class="sv-t b you">In call</text>
+      <rect x="745" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="800" y="87" text-anchor="middle" class="sv-t b">Goodbye</text>
+      <!-- forward edges -->
+      <line x1="132" y1="82" x2="163" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="147" y="52" text-anchor="middle" class="sv-t">start</text>
+      <line x1="277" y1="82" x2="308" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="292" y="52" text-anchor="middle" class="sv-t">T passed</text>
+      <line x1="422" y1="82" x2="453" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="437" y="52" text-anchor="middle" class="sv-t">matched</text>
+      <line x1="567" y1="82" x2="598" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="582" y="52" text-anchor="middle" class="sv-t">media up</text>
+      <line x1="712" y1="82" x2="743" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="727" y="52" text-anchor="middle" class="sv-t">your stop</text>
+      <!-- return edges -->
+      <path d="M220,106 L220,130 L75,130 L75,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="147" y="126" text-anchor="middle" class="sv-t mu">stop before T</text>
+      <path d="M655,106 L655,130 L365,130 L365,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="585" y="126" text-anchor="middle" class="sv-t mu">peer left</text>
+      <path d="M530,106 L530,160 L380,160 L380,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="450" y="156" text-anchor="middle" class="sv-t mu">could not connect</text>
+      <path d="M350,106 L350,190 L75,190 L75,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="212" y="186" text-anchor="middle" class="sv-t mu">stop</text>
+      <text x="450" y="222" text-anchor="middle" class="sv-t">Any state returns to Idle after N minutes without a signal.</text>
+      <text x="450" y="237" text-anchor="middle" class="sv-t mu">Covers Escape, crashes, and closed terminals, because Stop never fires on an interrupt.</text>
+      <text x="450" y="252" text-anchor="middle" class="sv-t mu">A permission prompt shows a banner to both people and does not change state.</text>
+    </svg>
+    <figcaption>Every state has a way home. The two numbers to tune are T (the arm threshold) and N (the silence timeout), both set from Phase 0 data.</figcaption>
+  </figure>
+
+  <h3>The plugin side</h3>
+  <p>A tested skeleton already exists in <code>prototype/plugin/</code>. It has five hooks (UserPromptSubmit, Stop, StopFailure, SessionEnd, Notification), passed <code>claude plugin validate --strict</code>, and delivered start, stop, and session-end events end to end on this machine. The MVP adds PostToolUse (D-18) and swaps Notification for PermissionRequest (D-21); those two are planned, not yet tested. The shape:</p>
+<pre><code>claude-omegle/
+  .claude-plugin/plugin.json      name, version, description
+  hooks/hooks.json                UserPromptSubmit, Stop, StopFailure, SessionEnd, Notification
+                                  (tested)  + PermissionRequest, PostToolUse (planned)  all "async": true
+  scripts/signal.sh               reads the hook JSON, POSTs {token, event, session hash}
+                                  with a 2 s timeout, prints nothing, always exits 0
+  scripts/toggle.sh               creates ~/.claude-omegle/{token,enabled}, prints the URL
+  commands/omegle.md              /claude-omegle:omegle on|off</code></pre>
+  <p class="small">Why these hooks: UserPromptSubmit is "started". Stop is the normal end. StopFailure is the end on an API error. SessionEnd retires the session. PermissionRequest fires the instant Claude needs you (the Notification variant waits about six seconds). PostToolUse is the heartbeat that keeps the timeout honest and gives the stranger a pulse. The skeleton currently forwards the whole hook payload; the real script must project it down to token, event, and a hash of the session id, so prompts never leave the machine.</p>
+
+  <h3>The lobby protocol</h3>
+  <p>Six messages each way. That is the whole protocol.</p>
+  <div class="tbl"><table>
+    <tr><th>Direction</th><th>Message</th><th>Meaning</th></tr>
+    <tr><td class="k">hook → lobby</td><td class="k">POST /signal</td><td>{token, event: started | stopped | tick, session}. Idempotent. A "started" also closes any stale call for that token.</td></tr>
+    <tr><td class="k">tab → lobby</td><td class="k">hello</td><td>Attach this socket to a pairing token; carries the invite code once.</td></tr>
+    <tr><td class="k">tab → lobby</td><td class="k">join / leave</td><td>Enter or leave the queue (after T, or on stop / skip / report).</td></tr>
+    <tr><td class="k">tab → lobby</td><td class="k">offer / answer / ice</td><td>WebRTC signaling, relayed verbatim to the partner.</td></tr>
+    <tr><td class="k">tab → lobby</td><td class="k">reveal</td><td>"I am willing to show video." Video starts when both have sent it.</td></tr>
+    <tr><td class="k">tab → lobby</td><td class="k">report</td><td>Ends the call, records the pair of tokens for a manual block list.</td></tr>
+    <tr><td class="k">lobby → tab</td><td class="k">state</td><td>Your own Claude's status as the hooks see it: working / stopped / tick, with the session set.</td></tr>
+    <tr><td class="k">lobby → tab</td><td class="k">presence</td><td>Honest counts: online, waiting. Never padded.</td></tr>
+    <tr><td class="k">lobby → tab</td><td class="k">matched</td><td>{matchId, polite, iceServers}. Relay credentials are minted here, short-lived.</td></tr>
+    <tr><td class="k">lobby → tab</td><td class="k">offer / answer / ice</td><td>Partner's signaling.</td></tr>
+    <tr><td class="k">lobby → tab</td><td class="k">peer_left</td><td>{reason: their_claude_done | skip | report | dropped}. You go back to the queue.</td></tr>
+    <tr><td class="k">lobby → tab</td><td class="k">error</td><td>Rate limited, blocked, bad invite code, maintenance mode.</td></tr>
+  </table></div>
+  <p class="small">Two details carry the design. The lobby assigns the "polite" role at match time so the browsers can use the standard perfect-negotiation pattern without arguing. And "partner left" is detected from the WebSocket closing, which the lobby sees in seconds, not from the media connection, which can take half a minute to notice.</p>
+</section>
+
+<section id="plan">
+  <h2>04 · Build plan</h2>
+  <p>Four phases. Each one produces something you can feel before the next one starts. Phase 0 costs an hour and decides the two numbers everything else depends on.</p>
+  <div class="tbl"><table>
+    <tr><th>Phase</th><th>What you build</th><th>What you learn</th><th>Effort</th></tr>
+    <tr><td class="k">0 · Instrument</td><td>Install the prototype plugin with a local logger: every start, stop, and tick appends a timestamp to <code>~/.claude-omegle/log.tsv</code>. Use it for a week of normal work. Optionally add <code>say "start"</code> and <code>say "stop"</code> so you can <em>hear</em> the rhythm.</td><td>The turn-duration histogram. What fraction of turns pass 30 s, and of those, how many pass 3 min (the floor question). The longest silent gap between ticks (sets N). Whether Escape really skips Stop.</td><td>1 hour, then wait a week</td></tr>
+    <tr><td class="k">1 · Lobby</td><td>Worker + static page + one Lobby object with hibernating WebSockets. Hello, join, match, relay JSON, leave, presence counts, the signal endpoint. No media. Two browser windows get paired and each sees the other's Claude clock.</td><td>The pairing logic, the state machine, and the timeout, all testable with two tabs on one laptop.</td><td>One weekend</td></tr>
+    <tr><td class="k">2 · Call</td><td>RTCPeerConnection with perfect negotiation, Cloudflare STUN, audio first, video on mutual reveal, TURN credentials minted at match time, chime + title flash, five-second goodbye, camera released on hang-up.</td><td>Your own relay rate (instrument <code>remoteCandidateType</code>) instead of the assumed 20 percent. Safari and Firefox permission behaviour.</td><td>One weekend</td></tr>
+    <tr><td class="k">3 · Friends</td><td>Invite code, Skip with a three-per-hour limit, Report, block list by token, 30-minute hard cap, kill switch, office hours window, rules screen. Share with five to ten people for two weeks. Run both channel modes as experiments: audio-first versus video-on-mic-off.</td><td>Matches per day, median call length, how calls end (Claude done, skip, timeout), and the one question that matters: "would you keep the tab open tomorrow?"</td><td>Two evenings, then two weeks of use</td></tr>
+    <tr><td class="k">Later</td><td>Rename. Always-on-top mini window (Document Picture-in-Picture, Chrome). Lurker mode (Q-04). GitHub sign-in as a bannable identity. Text fallback. Public launch only with automated video moderation and a lawyer's read.</td><td></td><td></td></tr>
+  </table></div>
+
+  <h3>Scope fence for the MVP</h3>
+  <div class="cols">
+    <div class="card"><h4>In</h4><ul>
+      <li>Plugin: six hooks, one command, pairing token, on/off flag</li>
+      <li>Page: rules, idle, waiting alone, connecting, in call, goodbye</li>
+      <li>Audio first, video by mutual click, self-view optional</li>
+      <li>Live honest counts; both Claudes' clocks and tool pulses</li>
+      <li>Skip (rate-limited), Report, Away, invite code, hard cap, kill switch</li>
+      <li>One Worker, one Lobby object, no database, no accounts</li>
+    </ul></div>
+    <div class="card"><h4>Out, on purpose</h4><ul>
+      <li>Accounts, sign-in, profiles, history, ratings, streaks</li>
+      <li>Text chat, group rooms, lurker mode, topic matching</li>
+      <li>Duration prediction of any kind</li>
+      <li>Recording, transcripts, analytics beyond counts</li>
+      <li>Mobile polish, multi-region lobbies, video moderation classifier</li>
+      <li>Any mention of what the prompt or repo is</li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="edges">
+  <h2>05 · Edge cases and failure modes</h2>
+  <p>The rule for every row: the failure must land you in Idle or Waiting, never in a stuck call or a camera that stays on.</p>
+  <div class="tbl"><table>
+    <tr><th>Situation</th><th>What happens</th><th>Why it is safe</th></tr>
+    <tr><td>Quick reply, under the threshold</td><td>Tab arms, stop arrives, tab disarms. No queue, no call.</td><td>T filters the short hump of the distribution.</td></tr>
+    <tr><td>You press Escape mid-turn</td><td>No Stop fires (documented). Ticks stop. Tab drops to Idle after N minutes of silence, or immediately on your next prompt.</td><td>Silence timeout plus idempotent start. N is measured, not guessed.</td></tr>
+    <tr><td>Long build with no tool events for longer than N</td><td>False "stopped": call ends with "your Claude went quiet".</td><td>Tunable. Phase 0 shows the longest real gaps. Prefer a rare early goodbye over a stuck call.</td></tr>
+    <tr><td>API error ends the turn</td><td>StopFailure fires; treated as stopped.</td><td>Extra hook, no logic.</td></tr>
+    <tr><td>Terminal closed or laptop sleeps</td><td>SessionEnd fires, or the socket drops and the lobby notifies the partner within seconds.</td><td>Presence lives on the WebSocket, not on media state.</td></tr>
+    <tr><td>Tab closed</td><td>Hooks still post; the lobby has no socket for that token and drops the event.</td><td>Tab open is the availability signal. No zombie state to clean.</td></tr>
+    <tr><td>Several Claude sessions at once</td><td>Each session id is hashed into a set. You are "working" while the set is non-empty.</td><td>Sessions run hooks independently with stable ids (verified).</td></tr>
+    <tr><td>Claude asks permission mid-call</td><td>PermissionRequest fires instantly. Both people see "their Claude needs them". Call continues.</td><td>A shared moment, not an ending. Wandering off is covered by the timeout.</td></tr>
+    <tr><td>Nobody else is waiting</td><td>Solo screen with your Claude's clock and the honest count.</td><td>The normal case is designed first.</td></tr>
+    <tr><td>Their Claude finishes first</td><td>They get the goodbye; you see "their Claude finished" and go back to the queue.</td><td>Asymmetric endings are the concept.</td></tr>
+    <tr><td>Both Claudes finish within a second</td><td>Whichever "stopped" the lobby sees first ends the call; the other tab is already leaving.</td><td>Idempotent leave.</td></tr>
+    <tr><td>Camera or mic denied, or the prompt is ignored</td><td>Denied: show instructions for the address-bar icon, stay in Waiting without media. Ignored: the browser promise may never settle, so a 20 s media timeout drops you from the queue.</td><td>Browsers do not allow a re-prompt after a hard deny. Never loop on getUserMedia.</td></tr>
+    <tr><td>Media cannot connect</td><td>ICE fails after STUN and TURN; both tabs return to Waiting with "could not connect".</td><td>Signaling stays up so the pair can be re-matched to others.</td></tr>
+    <tr><td>Network changes mid-call (Wi-Fi to hotspot)</td><td>Restart ICE on "failed"; treat "disconnected" as transient with a spinner.</td><td>Standard WebRTC practice.</td></tr>
+    <tr><td>Bad behaviour</td><td>Skip (three per hour), Report (ends the call, logs the token pair), manual block by token, invite code rotation, kill switch env var.</td><td>Mechanical and blameless, the Portal shape. Public launch needs more; see memo 04.</td></tr>
+    <tr><td>Free tier pressure</td><td>Daily request cap corresponds to roughly 16,000 calls a day. TURN allowance to roughly 4,400 calls a day.</td><td>Orders of magnitude above hobby scale.</td></tr>
+    <tr><td>Wrong WebSocket API in the lobby</td><td>Holding sockets without hibernation burns about 85 percent of the daily duration budget while idle.</td><td>Use the hibernation API from day one; your Mist Maker relay already does.</td></tr>
+  </table></div>
+</section>
+
+<section id="cost">
+  <h2>06 · Free tier and cost</h2>
+  <p>Numbers verified from official pricing pages on 2026-09-05; the working is in <a href="research/03-free-hosting-and-webrtc.md">memo 03</a>.</p>
+  <div class="tbl"><table>
+    <tr><th>Layer</th><th>Choice</th><th>Free allowance</th><th>Where this project sits</th></tr>
+    <tr><td>Static page</td><td>Workers static assets</td><td>Free and uncounted</td><td>One HTML file</td></tr>
+    <tr><td>Signal endpoint</td><td>Worker</td><td class="num">100,000 requests / day</td><td>A few hundred a day at hobby scale</td></tr>
+    <tr><td>Lobby</td><td>One SQLite-backed Durable Object, hibernating sockets</td><td class="num">100,000 requests / day, 13,000 GB-s / day, 32,768 sockets per object</td><td>Inbound socket messages bill at 20:1; idle costs nothing</td></tr>
+    <tr><td>Media</td><td>Browser to browser WebRTC</td><td>Free by construction</td><td>Never touches your infrastructure</td></tr>
+    <tr><td>NAT traversal</td><td>Cloudflare STUN, then Cloudflare TURN</td><td class="num">STUN unlimited; TURN 1,000 GB / month, then $0.05 / GB (egress only)</td><td>About 20 percent of calls need relay</td></tr>
+    <tr><td>Bot gate</td><td>Turnstile on join</td><td>Free, unlimited</td><td>Optional behind an invite code</td></tr>
+  </table></div>
+  <div class="tbl"><table>
+    <tr><th>Scenario, 100 calls / day × 5 min, 20 percent relayed</th><th class="num">Relay GB / month</th><th class="num">Cost</th></tr>
+    <tr><td>Audio only</td><td class="num">1.4</td><td class="num">$0</td></tr>
+    <tr><td>360p video (recommended default)</td><td class="num">9</td><td class="num">$0</td></tr>
+    <tr><td>720p video</td><td class="num">22.5</td><td class="num">$0</td></tr>
+    <tr><td>720p, ten times the traffic</td><td class="num">225</td><td class="num">$0</td></tr>
+    <tr><td>Hosted room service instead (Daily, LiveKit, Whereby)</td><td class="num">n/a</td><td class="num">free tiers run out at 7 to 33 calls / day; about $80 / month after</td></tr>
+  </table></div>
+  <div class="note warn"><p><strong>One thing to check in your Cloudflare dashboard.</strong> The research could not confirm whether a free-plan account can create a TURN key without a card on file. Five minutes in Realtime settings answers it. If not, Metered's Open Relay offers 20 GB a month free, enough for the MVP.</p></div>
+</section>
+
+<section id="thinking">
+  <h2>07 · Systems and design thinking</h2>
+
+  <h3>The liquidity model</h3>
+  <p>A matching product has a critical mass. The question is not "how many users" but "how many people are online and waiting at the same instant". A rough model:</p>
+<pre><code>N  = people with the tab open right now  = total users × fraction of the day they are online
+p  = fraction of online time spent past the threshold ("waiting")   ← Phase 0 measures this
+chance someone else is waiting when you start ≈ 1 − e^(−(N−1)·p)</code></pre>
+  <div class="tbl"><table>
+    <tr><th>Total users</th><th>Online fraction</th><th class="num">N online now</th><th class="num">Chance of a match (p = 0.2)</th><th class="num">Chance of a match (p = 0.4)</th></tr>
+    <tr><td>10 friends</td><td>0.15 (a few hours a day, scattered)</td><td class="num">1.5</td><td class="num">10%</td><td class="num">18%</td></tr>
+    <tr><td>40 people</td><td>0.15</td><td class="num">6</td><td class="num">63%</td><td class="num">86%</td></tr>
+    <tr><td>40 people</td><td>0.5 (office hours: everyone told to show up in one window)</td><td class="num">20</td><td class="num">98%</td><td class="num">100%</td></tr>
+    <tr><td>100 people</td><td>0.15</td><td class="num">15</td><td class="num">94%</td><td class="num">100%</td></tr>
+  </table></div>
+  <p>Two readings. First, ten friends scattered across a day will almost always wait alone, which is why the solo state comes first. Second, synchronising a small group (office hours) beats recruiting a large one, which is what Focusmate's fifteen-minute slots and the Portal's reduced hours both discovered. p is the lever the plugin itself controls: a lower threshold raises p but shortens calls toward the insult floor.</p>
+
+  <h3>Loops and leverage</h3>
+  <div class="cols">
+    <div class="card"><h4>Reinforcing loop</h4><p>Good encounter → keep the tab open tomorrow → more people online → more matches → more good encounters. This is the loop office hours are meant to kick-start.</p></div>
+    <div class="card"><h4>Balancing loop, wanted</h4><p>Bad encounter → report → block → fewer bad encounters. Must be one click and must have teeth (block by token, rotate the invite).</p></div>
+    <div class="card"><h4>Balancing loop, unwanted</h4><p>Feeling obliged to be on camera every run → fatigue → turn it off for good. Countered by default-off, Away, no streaks, no history.</p></div>
+    <div class="card"><h4>Leverage points, in order</h4><ul><li>Honest live count (information)</li><li>Office hours (synchronisation)</li><li>Threshold T and timeout N (the two dials)</li><li>Invite gate (quality of the pool)</li><li>Lurker mode, later (raises p artificially, breaks symmetry)</li></ul></div>
+  </div>
+
+  <h3>Design thinking, compressed</h3>
+  <div class="tbl"><table>
+    <tr><th>Step</th><th>For this project</th></tr>
+    <tr><td class="k">Empathise</td><td>The person is at a terminal, mid-task, watching a spinner verb. They feel a small anxiety and a pull toward the phone. They are also slightly protective: is anyone seeing my screen? (No. Say so on the rules screen.)</td></tr>
+    <tr><td class="k">Define</td><td>Turn the machine's working time into a bounded, blameless encounter. The ending is decided by neither human, which removes the social cost of leaving. The only thing both people share is that a machine is making them wait.</td></tr>
+    <tr><td class="k">Ideate</td><td>Video call (the ask). Audio-first with reveal (safer). Video-on-mic-off, a wave and a nod (Journey, Goffman). Both Claudes' clocks side by side. Tool pulses as a shared heartbeat. An opening question. A floating mini window over the terminal. A machine-set topic. Cross-time-zone pairing on purpose.</td></tr>
+    <tr><td class="k">Prototype</td><td>Phase 0 with <code>say</code> lets you hear the rhythm for free. A Wizard-of-Oz test: hooks say "start", you FaceTime a friend by hand, hang up on "stop". That tests the feeling before any code exists.</td></tr>
+    <tr><td class="k">Test</td><td>Two weeks with five to ten friends. Count matches per day, median call length, end reasons. Ask one question: would you keep the tab open tomorrow?</td></tr>
+  </table></div>
+</section>
+
+<section id="questions">
+  <h2>08 · Questions for David</h2>
+  <p>Each has the default I assumed. Answer any, and the decision log and change log get updated.</p>
+  <div class="tbl"><table class="decision">
+    <tr><th>#</th><th>Question</th><th>Default assumed</th></tr>
+    <tr><td>Q-01</td><td>Name. Keep "claude-omegle" (trademark, dark legacy, and omegle.com is live again under a new owner) or rename?</td><td>Working title only. My recommendation: <em>Meanwhile</em>.</td></tr>
+    <tr><td>Q-02</td><td>Audience: you and friends (invite-only), the Claude Code community (public), or an exhibited artwork?</td><td>Friends for MVP. Public only with moderation and legal review. Artwork framing is compatible with friends-scale.</td></tr>
+    <tr><td>Q-03</td><td>Camera on by default (your original idea), or audio-first with a mutual "show video" click?</td><td>Audio-first with mutual reveal. Three memos independently point here. Video-on-mic-off is a Phase 3 experiment.</td></tr>
+    <tr><td>Q-04</td><td>Lurker mode: may people who are not waiting on Claude sit in the room and get matched with someone who is? Roughly doubles matches, breaks the symmetry.</td><td>Not in MVP. Revisit after seeing real match rates.</td></tr>
+    <tr><td>Q-05</td><td>What may the stranger see about your task: nothing, elapsed time, elapsed time plus tool pulses, or a one-line label you type?</td><td>Elapsed time plus pulses. Never text from the session.</td></tr>
+    <tr><td>Q-06</td><td>Host on your existing Cloudflare account (byproductlab.com subdomain) or a separate account / workers.dev address?</td><td>Your account, workers.dev first, subdomain after the rename.</td></tr>
+    <tr><td>Q-07</td><td>Strict instant hang-up when Claude finishes, or a five-second goodbye?</td><td>Goodbye. It softens the cut without changing who decides.</td></tr>
+    <tr><td>Q-08</td><td>Several Claude sessions at once: does "any session working" count as waiting?</td><td>Yes, any.</td></tr>
+    <tr><td>Q-09</td><td>Distribution: private install, your own marketplace repo, or a public marketplace?</td><td>Private for MVP, via <code>--plugin-dir</code> or your own marketplace repo.</td></tr>
+    <tr><td>Q-10</td><td>Repo home <code>~/Documents/GitHub/claude-omegle</code>, public or private?</td><td>Yes, private until the name is settled.</td></tr>
+    <tr><td>Q-11</td><td>Office hours: which two-hour window and time zone should the founding group agree on?</td><td>Undecided. Pick one before Phase 3.</td></tr>
+  </table></div>
+</section>
+
+<section id="decisions">
+  <h2>09 · Decision log</h2>
+  <p>Every non-obvious choice, with the reason. "Proposed" means my recommendation awaiting your answer; "accepted" means it came from your brief. The full text with what each decision rules out is in <a href="DECISIONS.md">DECISIONS.md</a>.</p>
+  <div class="tbl"><table class="decision">
+    <tr><th>#</th><th>Decision</th><th>Why</th><th>Status</th></tr>
+    <tr><td>D-01</td><td>This deliverable is a plan, not code.</td><td>Your brief asked for concept feedback and a build plan first.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-02</td><td>"Claude is working" is the span from UserPromptSubmit to Stop. Observe, never predict.</td><td>No duration estimate or timestamp exists in any hook payload.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-03</td><td>One persistent tab; hooks never open a browser.</td><td>A tab per turn would be hostile; hooks also have no TTY. Tab open = available.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-04</td><td>Hooks talk to the tab through the cloud lobby, not a local server.</td><td>Reuses your Mist Maker Worker + Durable Object pattern; no daemon; tab can be on any device.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-05</td><td>Hooks use <code>"async": true</code>, print nothing, always exit 0, 2 s curl timeout.</td><td>Documented fire-and-forget. UserPromptSubmit stdout would enter Claude's context.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-06</td><td>Threshold T before joining the queue. Placeholder 30 s, set from Phase 0.</td><td>Filters quick replies and protects the blameless exit from the insult floor.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-07</td><td>Media browser to browser; Cloudflare STUN; Cloudflare TURN (1,000 GB/mo free) as fallback; Metered Open Relay if a free account cannot mint TURN keys.</td><td>No media server means no media cost.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-08</td><td>One Worker, one global Lobby object, hibernation API mandatory, no database, no accounts.</td><td>Pairing is a consistency problem and a Durable Object is a consistency primitive. Hibernation is what keeps it free.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-09</td><td>Identity is a random per-machine token; session ids are hashed; "working" is a set.</td><td>Handles several terminals; nothing identifying leaves the machine.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-10</td><td>The call ends when the starting wait ends; the other person is re-queued; five-second goodbye.</td><td>Asymmetric endings are the concept. The countdown softens the cut without changing who decides.</td><td><span class="chip">proposed</span> Q-07</td></tr>
+    <tr><td>D-11</td><td>"Waiting alone" is the default state; matching is the bonus.</td><td>At friends-scale two Claudes rarely overlap. See the liquidity table.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-12</td><td>Consent in three layers. Mic acquired on match, camera on mutual reveal, both released on hang-up.</td><td>No silent capture; the camera light is off between calls.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-13</td><td>Safety MVP: invite code, rules and 18+ screen, Skip three per hour, Report, block by token, 30-minute hard cap, kill switch, never record.</td><td>Mechanical and blameless (the Portal shape). Invite-only is also the legal mitigation.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-14</td><td>Attention: chime and title flash in MVP; always-on-top mini window later.</td><td>You are looking at the terminal, not the browser.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-15</td><td>"claude-omegle" stays a working title. Recommendation: Meanwhile.</td><td>Trademark and legacy, and omegle.com is active again under a new owner.</td><td><span class="chip">proposed</span> Q-01</td></tr>
+    <tr><td>D-16</td><td>This HTML is the canonical plan; research stays in Markdown.</td><td>Short synthesis, deep sources.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-17</td><td>Phase 0 is instrumentation only.</td><td>T and N must be measured from your real turns.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-18</td><td>PostToolUse heartbeat feeds the timeout and a visible pulse.</td><td>Cheap because hooks are async; makes the timeout honest.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-19</td><td>Interrupt safety: silence timeout N (placeholder 5 min), plus StopFailure and SessionEnd hooks, plus "started" closes any stale call.</td><td>Stop does not fire on Escape (documented). Without this a call could hang open.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-20</td><td>Audio first; video by mutual click. Video-on-mic-off tested as an experiment in Phase 3.</td><td>Three memos converge on "restrict the channel first". Costs nothing to build, is the public-safe default.</td><td><span class="chip">proposed</span> Q-03</td></tr>
+    <tr><td>D-21</td><td>Use the PermissionRequest hook as a passive observer; "Claude needs you" is a banner, not a state change.</td><td>The Notification variant waits about six seconds. Hanging up would hit the insult floor.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-22</td><td>Plugin ships disabled; flag and token live at a fixed <code>~/.claude-omegle</code> path.</td><td>Plugin hooks install with no approval prompt. The plugin data variable leaked another plugin's value inside a slash command (observed).</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-23</td><td>The signal script sends only token, event, and a session hash.</td><td>Hook payloads include the prompt text; it must never leave the machine.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-24</td><td>360p video, Opus audio by default.</td><td>A small window nobody looks at closely; a 2.5× relay saving over 720p.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-25</td><td>"Partner left" comes from the WebSocket closing, not from media state.</td><td>Seconds instead of half a minute.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-26</td><td>Each match opens with one question: "What is your Claude doing?"</td><td>Portals' lesson: one good question rescues an agenda-less encounter. Optional to answer.</td><td><span class="chip">proposed</span> Q-05</td></tr>
+  </table></div>
+</section>
+
+<section id="changes">
+  <h2>10 · Change log</h2>
+  <div class="tbl"><table>
+    <tr><th>Date</th><th>Change</th></tr>
+    <tr><td class="k">2026-09-05</td><td><strong>v0.1.</strong> Project folder created. Four research memos commissioned and delivered. Plan written.</td></tr>
+    <tr><td class="k">2026-09-05</td><td>After research: default channel changed from camera-on to audio-first with mutual reveal (D-20, Q-03). Goodbye countdown 3 s to 5 s (D-10). Threshold placeholder 20 s to 30 s (D-06). Added D-19 to D-26 (interrupt safety, PermissionRequest, disabled-by-default, payload projection, 360p, socket-based presence, opening question). Added Q-11 (office hours).</td></tr>
+    <tr><td class="k">2026-09-05</td><td>Tested plugin skeleton from the mechanics memo saved under <code>prototype/plugin/</code>; passes <code>claude plugin validate --strict</code>.</td></tr>
+  </table></div>
+</section>
+
+<section id="files">
+  <h2>11 · Files and sources</h2>
+  <div class="tbl"><table>
+    <tr><th>Path</th><th>What it is</th></tr>
+    <tr><td class="k">docs/index.html</td><td>This plan.</td></tr>
+    <tr><td class="k">docs/DECISIONS.md</td><td>Decision log with what each decision rules out.</td></tr>
+    <tr><td class="k">docs/QUESTIONS.md</td><td>Open questions and assumed defaults.</td></tr>
+    <tr><td class="k">docs/CHANGELOG.md</td><td>Plan changes by date.</td></tr>
+    <tr><td class="k">docs/research/01-art-theory-lineage.md</td><td>30 works and theories, eight insights, name candidates, prior-art scan, an appendix of folk claims that failed verification. 193 URLs.</td></tr>
+    <tr><td class="k">docs/research/02-claude-code-plugin-mechanics.md</td><td>Plugin anatomy, all 33 hook events, payloads, Stop semantics, invisibility rules, distribution, and the tested example. 26 doc citations.</td></tr>
+    <tr><td class="k">docs/research/03-free-hosting-and-webrtc.md</td><td>Cloudflare free-plan limits, TURN pricing and cost model, buy-vs-build, browser permission behaviour, signaling protocol, unverified-items table.</td></tr>
+    <tr><td class="k">docs/research/04-product-history-and-safety.md</td><td>Omegle, Chatroulette, Portals, Focusmate, Airtime, Houseparty, Clubhouse; the danger-vs-safety comparison; MVP and public-launch safety checklists; legal minimums; liquidity.</td></tr>
+    <tr><td class="k">prototype/plugin/</td><td>Validated plugin skeleton: manifest, hooks.json, signal.sh, toggle.sh, the slash command.</td></tr>
+  </table></div>
+
+  <h3>Primary sources worth opening first</h3>
+  <ul class="small">
+    <li>Claude Code hooks reference: <a href="https://code.claude.com/docs/en/hooks">code.claude.com/docs/en/hooks</a> (Stop and interrupts, async hooks, PermissionRequest, 33 events)</li>
+    <li>Claude Code plugins reference: <a href="https://code.claude.com/docs/en/plugins-reference">code.claude.com/docs/en/plugins-reference</a></li>
+    <li>Durable Objects pricing and limits: <a href="https://developers.cloudflare.com/durable-objects/platform/pricing/">developers.cloudflare.com/durable-objects/platform/pricing</a></li>
+    <li>Cloudflare Realtime TURN: <a href="https://developers.cloudflare.com/realtime/turn/">developers.cloudflare.com/realtime/turn</a></li>
+    <li>WebRTC perfect negotiation: <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Perfect_negotiation">MDN</a></li>
+    <li>Hole in Space (1980): <a href="https://www.ecafe.com/getty/HIS/">ecafe.com/getty/HIS</a></li>
+    <li>New York–Dublin Portal reopening with blur and hours: <a href="https://techcrunch.com/2024/05/20/nyc-dublin-real-time-video-portal-reopens-with-some-fixes-to-prevent-inappropriate-behavior">TechCrunch, 20 May 2024</a></li>
+    <li>Omegle history and shutdown: <a href="https://en.wikipedia.org/wiki/Omegle">Wikipedia</a></li>
+    <li>Focusmate, how it works: <a href="https://www.focusmate.com/how-it-works">focusmate.com/how-it-works</a></li>
+    <li>Claire Bishop, "Antagonism and Relational Aesthetics" (2004): <a href="https://sciami.com/scm-content/uploads/sites/7/2017/04/Claire-Bishop-antagonism-and-relational-aesthetics-october-2004.pdf">PDF</a></li>
+    <li>Jason Farman, <em>Delayed Response</em> (2018): <a href="https://yalebooks.yale.edu/book/9780300225679/delayed-response/">Yale University Press</a></li>
+    <li>Nearest prior art, coderoulette: <a href="https://github.com/coderoulette/coderoulette">github.com/coderoulette/coderoulette</a></li>
+    <li>Zoom collaborative waiting-room patents: <a href="https://patents.google.com/patent/US11936813B2/en">US 11,936,813 B2</a>, <a href="https://patents.google.com/patent/US11627224B1/en">US 11,627,224 B1</a></li>
+    <li>xkcd 303, "Compiling": <a href="https://xkcd.com/303/">xkcd.com/303</a></li>
+  </ul>
+</section>
+
+<footer>
+  claude-omegle plan v0.1 · written 2026-09-05 with Claude Code (Fable 5.1) and four Opus 5 research agents · facts verified against Claude Code 2.1.261 and official Cloudflare pricing pages on that date · everything marked "proposed" is waiting for David.
+</footer>
+</main>
+</div>
+</body>
+</html>

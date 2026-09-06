@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wait-together</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&family=Martian+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#151C26; --muted:#5A6675; --line:#CDD4DC;
+  --you:#1F4FD8; --you-soft:#DCE5FB; --them:#C9432B; --them-soft:#F8E0DA;
+  --work:#D7DDE5; --work-ink:#3E4A58; --code-bg:#E4E9F0; --warn:#B7791F; --warn-soft:#FBF0DA;
+  --mono:"Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --serif:"Literata", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F141A; --surface:#161C24; --ink:#E5E9EE; --muted:#96A1AD; --line:#2A333E;
+    --you:#7C9EFF; --you-soft:#1D2A4D; --them:#FF8A73; --them-soft:#4A241C;
+    --work:#2A333E; --work-ink:#B8C2CD; --code-bg:#1C242E; --warn:#E0A94A; --warn-soft:#3A2E16;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F141A; --surface:#161C24; --ink:#E5E9EE; --muted:#96A1AD; --line:#2A333E;
+  --you:#7C9EFF; --you-soft:#1D2A4D; --them:#FF8A73; --them-soft:#4A241C;
+  --work:#2A333E; --work-ink:#B8C2CD; --code-bg:#1C242E; --warn:#E0A94A; --warn-soft:#3A2E16;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);font-size:17px;line-height:1.6;font-variation-settings:"opsz" 14}
+a{color:var(--you);text-decoration-thickness:1px;text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--you);outline-offset:2px}
+.page{max-width:1180px;margin:0 auto;padding:36px 24px 80px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:56px}
+@media (max-width:900px){.page{grid-template-columns:1fr;gap:24px;padding:20px 16px 60px}}
+/* rail */
+.rail{position:sticky;top:20px;align-self:start;font-family:var(--mono);font-size:11.5px;line-height:1.5}
+.rail .brand{font-weight:600;font-size:12px;letter-spacing:.02em;margin-bottom:4px}
+.rail .sub{color:var(--muted);margin-bottom:18px}
+.rail nav a{display:block;color:var(--ink);text-decoration:none;padding:4px 0;border-top:1px solid var(--line)}
+.rail nav a:last-child{border-bottom:1px solid var(--line)}
+.rail nav a:hover{color:var(--you)}
+.rail nav .n{display:inline-block;width:2.2em;color:var(--muted)}
+@media (max-width:900px){.rail{position:static}.rail nav{display:flex;flex-wrap:wrap;gap:4px 14px}.rail nav a{border:0;padding:2px 0}}
+/* main */
+main{max-width:840px;min-width:0}
+h1{font-family:var(--serif);font-weight:600;font-size:40px;line-height:1.1;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance;font-variation-settings:"opsz" 72}
+.lede{font-size:20px;line-height:1.45;color:var(--ink);max-width:36em;margin:10px 0 0;font-variation-settings:"opsz" 24}
+.meta{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin:16px 0 0;display:flex;flex-wrap:wrap;gap:6px 18px}
+h2{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.2;margin:64px 0 14px;text-wrap:balance;font-variation-settings:"opsz" 48;scroll-margin-top:24px}
+h3{font-family:var(--serif);font-weight:600;font-size:18.5px;line-height:1.3;margin:30px 0 8px;text-wrap:balance}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+p{max-width:68ch;margin:0 0 14px}
+ul,ol{max-width:68ch;padding-left:1.3em;margin:0 0 14px}
+li{margin:0 0 6px}
+li::marker{color:var(--muted)}
+strong{font-weight:600}
+em{font-style:italic}
+hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+code{font-family:var(--mono);font-size:.82em;background:var(--code-bg);padding:1px 5px;border-radius:3px}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.55;background:var(--code-bg);padding:14px 16px;border-radius:4px;overflow-x:auto;margin:0 0 16px;max-width:100%}
+pre code{background:none;padding:0;font-size:inherit}
+.tldr{background:var(--surface);border:1px solid var(--line);padding:18px 22px;margin:28px 0 0}
+.tldr ul{margin:0;max-width:none}
+.tldr li{margin-bottom:8px}
+.tbl{overflow-x:auto;margin:0 0 18px;background:var(--surface);border:1px solid var(--line)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.45}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.k{font-family:var(--mono);font-size:12px;white-space:nowrap;color:var(--work-ink)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{border-left:3px solid var(--you);background:var(--surface);padding:12px 16px;margin:0 0 18px;max-width:72ch}
+.note p:last-child{margin-bottom:0}
+.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:2px 8px;border:1px solid var(--line);border-radius:999px;white-space:nowrap;color:var(--work-ink)}
+.chip.you{border-color:var(--you);color:var(--you)}
+.chip.them{border-color:var(--them);color:var(--them)}
+figure{margin:26px 0 30px;background:var(--surface);border:1px solid var(--line);padding:18px 18px 12px}
+figure svg{display:block;max-width:100%;height:auto;color:var(--ink)}
+figcaption{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:10px;max-width:80ch}
+.sv-work{fill:var(--work)}
+.sv-you{fill:var(--you)}
+.sv-you-soft{fill:var(--you-soft)}
+.sv-them{fill:var(--them)}
+.sv-box{fill:var(--surface);stroke:currentColor;stroke-width:1.2}
+.sv-lobby{fill:var(--you-soft);stroke:var(--you);stroke-width:1.4}
+.sv-t{font-family:var(--mono);font-size:11px;fill:currentColor}
+.sv-t.mu{fill:var(--muted)}
+.sv-t.you{fill:var(--you)}
+.sv-t.them{fill:var(--them)}
+.sv-t.b{font-weight:600;font-size:12px}
+.sv-l{stroke:currentColor;stroke-width:1.2;fill:none}
+.sv-l.you{stroke:var(--you)}
+.sv-l.dash{stroke-dasharray:4 4}
+.qa dt{font-weight:600;margin:18px 0 4px;font-size:17.5px}
+.qa dd{margin:0 0 4px;max-width:68ch}
+.qa{margin:0 0 10px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:0 0 18px}
+.card{background:var(--surface);border:1px solid var(--line);padding:14px 16px}
+.card h4{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.card p,.card ul{font-size:15px;margin-bottom:8px}
+.card ul{padding-left:1.1em}
+.card p:last-child,.card ul:last-child{margin-bottom:0}
+.small{font-size:14.5px;color:var(--muted)}
+.decision td:first-child{font-family:var(--mono);font-size:12px;white-space:nowrap}
+.q-default{display:block;margin-top:4px;font-family:var(--mono);font-size:12px;color:var(--work-ink)}
+footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.6}
+@media (prefers-reduced-motion: no-preference){html{scroll-behavior:smooth}}
+</style>
+</head><body>
+<div class="page">
+<aside class="rail">
+  <div class="brand">wait-together</div>
+  <div class="sub">plan v0.2<br>2026-09-06</div>
+  <nav aria-label="Sections">
+    <a href="#tldr"><span class="n">00</span>Summary</a>
+    <a href="#decided"><span class="n">01</span>What we decided</a>
+    <a href="#how"><span class="n">02</span>How it works</a>
+    <a href="#pause"><span class="n">03</span>When Claude needs you</a>
+    <a href="#look"><span class="n">04</span>The look</a>
+    <a href="#plan"><span class="n">05</span>Build plan</a>
+    <a href="#edges"><span class="n">06</span>Edge cases</a>
+    <a href="#cost"><span class="n">07</span>Free tier</a>
+    <a href="#plugins"><span class="n">08</span>Plugins and names</a>
+    <a href="#questions"><span class="n">09</span>Open questions</a>
+    <a href="#decisions"><span class="n">10</span>Decision log</a>
+    <a href="#changes"><span class="n">11</span>Change log</a>
+    <a href="#files"><span class="n">12</span>Files and sources</a>
+  </nav>
+</aside>
+
+<main>
+<header>
+  <span class="eyebrow">Plan v0.2 · replaces v0.1</span>
+  <h1>wait-together</h1>
+  <p class="lede">While your Claude works, you are on a call with a stranger whose Claude is also working. When either Claude finishes, the call ends. Every wait, a different stranger.</p>
+  <div class="meta">
+    <span>Working name (Q-16 covers the folder)</span>
+    <span>Updated 2026-09-06</span>
+    <span>v0.1 archived in <span>docs/archive</span></span>
+  </div>
+</header>
+
+<section id="tldr">
+  <div class="tldr">
+    <span class="eyebrow">Summary</span>
+    <ul>
+      <li><strong>What it is.</strong> A Claude Code plugin plus one small web page. Two hooks tell a tiny lobby "my Claude started" and "my Claude stopped". The lobby pairs two people whose Claudes are both working and connects them by audio, browser to browser. Nothing about your task ever leaves your machine.</li>
+      <li><strong>What changed since v0.1.</strong> You answered eleven questions. Name: wait-together for now. Audience: friends first, r/ClaudeAI later. Audio first, video by mutual click. No lurkers, ever. The stranger sees nothing about your task except the goodbye countdown. Hosted on workers.dev. No schedules: the screen just waits.</li>
+      <li><strong>The one new design problem.</strong> "Claude needs you" is not "Claude is done". Section 03 splits the two: exact hook signals keep the call on and tell the stranger you are away for a moment; only a real finish starts the five-second countdown.</li>
+      <li><strong>The look.</strong> A 2009 web page, with Omegle as the joke and our own name, words, and logo. White page, blue and red speaker labels, glossy grey buttons, Verdana. The call lives in a small popup window beside your terminal. Mockups are on the design canvas linked in section 04.</li>
+      <li><strong>Next.</strong> Answer the seven open questions in section 09, then Phase 0: one hour to install the logging plugin, a week of normal use, and five small tests that settle the three timing numbers.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="decided">
+  <h2>01 · What we decided</h2>
+  <p>Your answers from 2026-09-06, turned into rules. Full reasoning is in <span>DECISIONS.md</span>.</p>
+  <div class="tbl"><table>
+    <tr><th>Topic</th><th>Rule</th><th>Log</th></tr>
+    <tr><td>Name</td><td>wait-together, for now. The folder stays <code>claude-omegle</code> until the name is confirmed.</td><td class="k">D-27</td></tr>
+    <tr><td>Who</td><td>Friends by invite first. r/ClaudeAI second, and only after the public safety checklist.</td><td class="k">D-28</td></tr>
+    <tr><td>Channel</td><td>Audio first. Video turns on only when both people click "show my video".</td><td class="k">D-20</td></tr>
+    <tr><td>Who can join</td><td>Only someone whose Claude is working right now. No lurkers, ever.</td><td class="k">D-29</td></tr>
+    <tr><td>What the stranger learns</td><td>Nothing about your task. The only thing they see is your five-second goodbye countdown when your Claude finishes.</td><td class="k">D-30</td></tr>
+    <tr><td>Ending</td><td>Your Claude finishes, both of you see "hanging up in 5", the call ends. The other person goes back to waiting.</td><td class="k">D-10</td></tr>
+    <tr><td>Claude needs you</td><td>The call stays on. The stranger sees you are away for a moment. Section 03.</td><td class="k">D-31</td></tr>
+    <tr><td>Nobody there</td><td>The popup says "Waiting for someone to wait for their Claude..." and waits. No schedules, no office hours.</td><td class="k">D-33</td></tr>
+    <tr><td>Several terminals</td><td>Any working Claude counts as waiting.</td><td class="k">D-09</td></tr>
+    <tr><td>Hosting</td><td>One Cloudflare Worker on a workers.dev address, on your account, not on byproductlab.com.</td><td class="k">D-32</td></tr>
+    <tr><td>Where the call lives</td><td>A small popup window opened once by a click, sitting beside the terminal. Confirm in Q-12.</td><td class="k">D-34</td></tr>
+    <tr><td>Repo and install</td><td>Private repo until the name is confirmed. Plugin installed privately for the alpha.</td><td class="k">D-22</td></tr>
+  </table></div>
+  <p class="small">Still standing from v0.1: observe, never predict (D-02); one persistent window, hooks never open a browser (D-03); hooks go through the cloud lobby, not a local server (D-04); a 30-second threshold before joining the queue (D-06); browser-to-browser media with Cloudflare's free relay as fallback (D-07); one Worker, one Lobby object, no database, no accounts (D-08); interrupt safety by silence timeout (D-19).</p>
+</section>
+
+<section id="how">
+  <h2>02 · How it works</h2>
+  <p>Three small pieces. The terminal says a few words to the lobby. The lobby pairs people and passes signaling. The two popups talk to each other directly.</p>
+
+  <figure>
+    <svg viewBox="0 0 1040 316" role="img" aria-label="Pipeline: your terminal's hooks post started, stopped, paused, and tick events to a Cloudflare Worker with a Lobby Durable Object; the Lobby pushes state, matches, and WebRTC signaling over WebSockets to your popup and the stranger's popup; audio and video flow peer to peer between the two popups.">
+      <defs>
+        <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <rect x="20" y="40" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="130" y="66" text-anchor="middle" class="sv-t b">Your terminal</text>
+      <text x="130" y="86" text-anchor="middle" class="sv-t mu">Claude Code + plugin hooks</text>
+      <rect x="800" y="40" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="910" y="66" text-anchor="middle" class="sv-t b">Stranger's terminal</text>
+      <text x="910" y="86" text-anchor="middle" class="sv-t mu">Claude Code + plugin hooks</text>
+      <rect x="410" y="40" width="220" height="64" rx="4" class="sv-lobby"/>
+      <text x="520" y="66" text-anchor="middle" class="sv-t b you">Cloudflare Worker</text>
+      <text x="520" y="86" text-anchor="middle" class="sv-t you">Lobby Durable Object</text>
+      <text x="520" y="124" text-anchor="middle" class="sv-t mu">free plan, no database</text>
+      <line x1="242" y1="72" x2="408" y2="72" class="sv-l" marker-end="url(#ah2)"/>
+      <text x="325" y="60" text-anchor="middle" class="sv-t">started · stopped · paused · tick</text>
+      <text x="325" y="92" text-anchor="middle" class="sv-t mu">curl, async, 2 s</text>
+      <line x1="798" y1="72" x2="632" y2="72" class="sv-l" marker-end="url(#ah2)"/>
+      <text x="715" y="60" text-anchor="middle" class="sv-t">started · stopped · paused · tick</text>
+      <text x="715" y="92" text-anchor="middle" class="sv-t mu">curl, async, 2 s</text>
+      <rect x="20" y="200" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="130" y="226" text-anchor="middle" class="sv-t b">Your popup</text>
+      <text x="130" y="246" text-anchor="middle" class="sv-t mu">small window, stays open</text>
+      <rect x="800" y="200" width="220" height="64" rx="4" class="sv-box"/>
+      <text x="910" y="226" text-anchor="middle" class="sv-t b">Stranger's popup</text>
+      <text x="910" y="246" text-anchor="middle" class="sv-t mu">small window, stays open</text>
+      <line x1="460" y1="106" x2="130" y2="198" class="sv-l you" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+      <text x="150" y="146" text-anchor="middle" class="sv-t you">WebSocket</text>
+      <text x="150" y="160" text-anchor="middle" class="sv-t mu">state · match · signaling</text>
+      <line x1="580" y1="106" x2="910" y2="198" class="sv-l you" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+      <text x="890" y="146" text-anchor="middle" class="sv-t you">WebSocket</text>
+      <text x="890" y="160" text-anchor="middle" class="sv-t mu">state · match · signaling</text>
+      <line x1="242" y1="232" x2="798" y2="232" class="sv-l dash" marker-start="url(#ah2)" marker-end="url(#ah2)"/>
+      <text x="520" y="224" text-anchor="middle" class="sv-t">audio (and video after both click), browser to browser</text>
+      <text x="520" y="250" text-anchor="middle" class="sv-t mu">STUN first; TURN relay only when needed</text>
+      <text x="520" y="290" text-anchor="middle" class="sv-t mu">Nothing from the session (prompt, code, transcript) leaves the machine.</text>
+      <text x="520" y="305" text-anchor="middle" class="sv-t mu">Only event names, a pairing token, and a hashed session id.</text>
+    </svg>
+    <figcaption>The terminal never opens a browser and never waits for us. The lobby holds the queue and relays signaling; media never touches it.</figcaption>
+  </figure>
+
+  <h3>A call, in words</h3>
+  <ol>
+    <li>Once: run <code>/wait-together on</code> in the terminal. It prints a link. Open it, read the rules, click Start. A small popup opens and stays beside the terminal.</li>
+    <li>Give Claude a task. Within a second the popup knows your Claude started.</li>
+    <li>If Claude finishes within 30 seconds, nothing happens. Quick answers never make a call.</li>
+    <li>After 30 seconds the popup joins the queue: "Waiting for someone to wait for their Claude..." Most of the time you wait alone. That is the normal case.</li>
+    <li>Someone else's Claude passes 30 seconds too. You are paired, audio connects, the popup chimes: "A random stranger is on the line. Say hi!"</li>
+    <li>Either of you can click "show my video"; it turns on when both have clicked. Either can hang up on the other (limited to a few per hour) or Report.</li>
+    <li>Your Claude finishes. Both popups show "Your Claude is done. Hanging up in 5..." The stranger sees the same countdown, then "Stranger is gone.", and goes back to waiting.</li>
+  </ol>
+
+  <figure>
+    <svg viewBox="0 0 900 262" role="img" aria-label="State machine of the popup: Idle to Armed on started; Armed back to Idle if stopped arrives within 30 seconds; Armed to Waiting after 30 seconds; Waiting to In call on match; In call to Paused when Claude needs you, and back to In call when you return; In call or Paused to Goodbye on a real finish; Goodbye to Idle after five seconds; In call back to Waiting when the stranger leaves; any state to Idle after a silence timeout.">
+      <defs>
+        <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+      </defs>
+      <path d="M800,58 L800,28 L75,28 L75,58" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="437" y="22" text-anchor="middle" class="sv-t mu">after 5 s: hang up, mic and camera released</text>
+      <rect x="20" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="75" y="87" text-anchor="middle" class="sv-t b">Idle</text>
+      <rect x="165" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="220" y="87" text-anchor="middle" class="sv-t b">Armed</text>
+      <rect x="310" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="365" y="87" text-anchor="middle" class="sv-t b">Waiting</text>
+      <rect x="455" y="60" width="110" height="44" rx="22" class="sv-lobby"/><text x="510" y="87" text-anchor="middle" class="sv-t b you">In call</text>
+      <rect x="600" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="655" y="87" text-anchor="middle" class="sv-t b">Paused</text>
+      <rect x="745" y="60" width="110" height="44" rx="22" class="sv-box"/><text x="800" y="87" text-anchor="middle" class="sv-t b">Goodbye</text>
+      <line x1="132" y1="82" x2="163" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="147" y="52" text-anchor="middle" class="sv-t">started</text>
+      <line x1="277" y1="82" x2="308" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="292" y="52" text-anchor="middle" class="sv-t">30 s passed</text>
+      <line x1="422" y1="82" x2="453" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="437" y="52" text-anchor="middle" class="sv-t">matched</text>
+      <line x1="567" y1="76" x2="598" y2="76" class="sv-l" marker-end="url(#ah3)"/><text x="582" y="52" text-anchor="middle" class="sv-t">needs you</text>
+      <line x1="598" y1="90" x2="567" y2="90" class="sv-l" marker-end="url(#ah3)"/>
+      <line x1="712" y1="82" x2="743" y2="82" class="sv-l" marker-end="url(#ah3)"/><text x="727" y="52" text-anchor="middle" class="sv-t">done, or G ran out</text>
+      <path d="M220,106 L220,130 L75,130 L75,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="147" y="126" text-anchor="middle" class="sv-t mu">stopped within 30 s</text>
+      <path d="M510,106 L510,130 L365,130 L365,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="437" y="126" text-anchor="middle" class="sv-t mu">stranger left</text>
+      <path d="M530,106 L530,160 L800,160 L800,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="665" y="156" text-anchor="middle" class="sv-t mu">your Claude is done</text>
+      <path d="M350,106 L350,190 L75,190 L75,106" class="sv-l" marker-end="url(#ah3)"/>
+      <text x="212" y="186" text-anchor="middle" class="sv-t mu">stopped</text>
+      <text x="582" y="108" text-anchor="middle" class="sv-t mu">you're back</text>
+      <text x="450" y="222" text-anchor="middle" class="sv-t">Any state returns to Idle after N minutes without a signal.</text>
+      <text x="450" y="237" text-anchor="middle" class="sv-t mu">Covers Escape, crashes, and closed terminals, because the Stop hook never fires on an interrupt.</text>
+      <text x="450" y="252" text-anchor="middle" class="sv-t mu">Three numbers to measure in Phase 0: the 30 s arm threshold, the silence timeout N, the pause grace G.</text>
+    </svg>
+    <figcaption>Every state has a way home. Paused is new in v0.2: the call stays on while your Claude needs you, and only a real finish leads to Goodbye.</figcaption>
+  </figure>
+</section>
+
+<section id="pause">
+  <h2>03 · When Claude needs you</h2>
+  <p>You asked me to think this through. The problem: the hooks see <em>turns</em>, not <em>tasks</em>. A task can span several turns with questions in between, and a permission prompt can stop Claude mid-turn. If every stop hung up, calls would end at random moments and the stranger would be gone by the time you answered Claude.</p>
+
+  <h3>What the terminal can tell us, and how sure we are</h3>
+  <div class="tbl"><table>
+    <tr><th>What happened</th><th>Signal</th><th>Sure?</th></tr>
+    <tr><td>Claude asks permission to use a tool</td><td class="k">PermissionRequest</td><td>Yes, fires immediately</td></tr>
+    <tr><td>Claude asks you a structured question</td><td class="k">PreToolUse (AskUserQuestion), then PostToolUse when you answer</td><td>Yes; confirm in Phase 0</td></tr>
+    <tr><td>A tool server asks you for input</td><td class="k">Elicitation</td><td>Yes</td></tr>
+    <tr><td>Claude stops but a background task is still running</td><td class="k">Stop with background_tasks not empty</td><td>Yes</td></tr>
+    <tr><td>Claude ends its turn with a question in prose</td><td class="k">Stop; last message ends like a question</td><td>A guess</td></tr>
+    <tr><td>Claude is finished</td><td class="k">Stop</td><td>Yes</td></tr>
+  </table></div>
+
+  <h3>The rule</h3>
+  <ol>
+    <li><strong>Exact pauses keep the call on.</strong> Permission request, structured question, tool input, background task: the popup goes to Paused. Your side says "Your Claude needs you. The call stays on." The stranger's side says "Stranger is away for a moment (their Claude needs them)". When Claude continues, "Stranger is back."</li>
+    <li><strong>A prose question is treated as a pause with a time limit.</strong> The signal script checks the last message on your machine (a small node one-liner; the text never leaves the Mac) and sends only the verdict: <code>stopped</code> or <code>paused</code>. A <code>paused</code> holds the call for a grace window G, placeholder 90 seconds. If you start a new turn within G, the call simply continues, no 30-second threshold. If not, the countdown runs and the call ends.</li>
+    <li><strong>Everything else is a real finish.</strong> Countdown, hang-up, as decided.</li>
+  </ol>
+  <p>The prose-question check is a guess, so it is a switch you can turn off. Its cost when wrong: the goodbye arrives up to G late when Claude ends with a rhetorical question. Its benefit when right: you answer Claude and the same stranger is still there.</p>
+  <p>The stranger never sees <em>what</em> Claude asked, only that you stepped away. That is availability, not task information. Q-13 asks whether this is acceptable to you; the alternative is that the stranger thinks they are being ignored.</p>
+  <p class="small">Phase 0 tests, one minute each: end a turn with a prose question; trigger AskUserQuestion; trigger a permission prompt; press Escape mid-turn; run a background task. Record which hooks fire. Two of these are still inferred in research 02.</p>
+</section>
+
+<section id="look">
+  <h2>04 · The look: a 2009 web page</h2>
+  <p>You asked for the look of the 2009 web with Omegle as the joke. Research 05 pulled Omegle's real 2009 stylesheet out of the Wayback Machine, so the values below are measured, not remembered. The mockups are on the <a href="https://claude.ai/code/artifact/447cf200-0465-4dcf-8ff0-984537a43877">design canvas</a> (eleven screens; working files in <code>design/</code>).</p>
+
+  <h3>The stance</h3>
+  <p>Our own name, wordmark, tagline, and intro paragraph. The era's grammar, which belongs to nobody: a light grey page, white boxes with one-pixel grey borders, Arial at the browser's default size, blue and red speaker labels, a borderless blue gradient button, a reserved ad rail. System lines in the same flat, deadpan voice, but our words. No Omegle logo, tagline, or copied sentences.</p>
+
+  <h3>What 2009 actually was (the surprises)</h3>
+  <ul>
+    <li><strong>Omegle was Arial at 16 px, not small Verdana.</strong> Its body set a font family and no size, so everything ran at the browser default with sizes in em. Small Verdana reads as Facebook 2009, not Omegle.</li>
+    <li><strong>Four greys and two keywords.</strong> Page #EEE, surface white, every border #CCC, status text #555. "You" is the CSS keyword blue, "Stranger" is the keyword red. Nothing else.</li>
+    <li><strong>The blue button has no border and no gloss split.</strong> A single gradient from #80BFFF to #0180FE, 3 px corners, white label. The 2006 button had a hard highlight at the middle; the 2009 one does not.</li>
+    <li><strong>The chat screen is the strongest signature.</strong> A log box filling the window with 1 em margins, a 5 em control bar pinned to the bottom, and two odd 7 em by 5 em white buttons on either side. Video feeds sit stacked in one 320 by 520 column beside the log.</li>
+    <li><strong>Status lines are bold, one size down, grey.</strong> "Looking for someone you can chat with. Hang on." That register, plus exactly one invented word per failure, is the tonal centre.</li>
+    <li><strong>The three-state button is 2010, not 2009.</strong> In 2009 a plain Disconnect button asked "Are you sure?" in a browser dialog. The Disconnect / Really? / New sequence arrived with video in March 2010.</li>
+    <li><strong>Hit counters, "best viewed in" notices, and tag clouds were not 2009 app conventions.</strong> They read as 1999 or as blog furniture. The honest online counter and a reserved ad rail are the period-correct jokes.</li>
+  </ul>
+
+  <h3>Tokens</h3>
+  <div class="tbl"><table>
+    <tr><th>Token</th><th>Value</th><th>Source</th></tr>
+    <tr><td>Body font</td><td class="k">Arial, Helvetica, sans-serif at 16px, line-height 1.5, sizes in em</td><td>Omegle body, verbatim</td></tr>
+    <tr><td>One heading font</td><td class="k">Lucida Grande, 1.25em, normal weight, #777</td><td>Omegle "Start a chat" heading</td></tr>
+    <tr><td>Page, surface, border, muted</td><td class="k">#EEE, #FFF, #CCC, #555</td><td>Omegle stylesheet</td></tr>
+    <tr><td>You, Stranger</td><td class="k">blue, red (CSS keywords)</td><td>Omegle log labels</td></tr>
+    <tr><td>Blue button</td><td class="k">#80BFFF to #0180FE, no border, 3px radius, white text</td><td>Sampled from Omegle's button image</td></tr>
+    <tr><td>Disabled button</td><td class="k">#BFBFBF to #818181</td><td>Same image, grey version</td></tr>
+    <tr><td>Notice, error</td><td class="k">#FFF9D7 pale yellow, #FFEBE8 pale pink</td><td>Facebook 2009 chat notices</td></tr>
+    <tr><td>Beta badge</td><td class="k">0.9em on #f9f6ba, no border</td><td>Twitter 2009</td></tr>
+    <tr><td>Links</td><td class="k">#0000EE, visited #551A8B</td><td>Browser defaults, left alone in 2009</td></tr>
+    <tr><td>Wordmark</td><td class="k">bold Arial in the button blue</td><td>Ours</td></tr>
+  </table></div>
+
+  <h3>Layout</h3>
+  <ul>
+    <li><strong>Home page:</strong> 1024 by 768 target. Fluid page with a white header (wordmark, "4 people waiting on their Claudes"), a white rounded card for the intro and the Start button, and a 160 px rail on the right reserved for a skyscraper ad. In the faithful variant the rail stays empty, which is itself the joke. In the garnished variant it holds a house ad for your Mist Maker.</li>
+    <li><strong>Popup:</strong> 720 by 580, a plausible window size then and now. Omegle's chat geometry: the log box, the 5 em control bar with a white "Hang up" button on the left and "Report" on the right, and the two feeds stacked in a column on the right. Audio-first, so the feeds show grey silhouettes with a small level meter until both click.</li>
+    <li><strong>Attention:</strong> Omegle's own trick, ported. When something happens while you are looking at the terminal, the window title alternates every half second between <code>___wait-together___</code> and <code>¯¯¯wait-together¯¯¯</code> with a swapped favicon, plus a chime. Any mouse move or key cancels it.</li>
+  </ul>
+
+  <h3>Copy, in the voice</h3>
+  <ul class="small">
+    <li>Connecting to the lobby...</li>
+    <li>Waiting for someone to wait for their Claude. Hang on.</li>
+    <li>A random stranger is on the line. Say hi!</li>
+    <li>You're both waiting on your Claudes. Neither of you can do anything about it.</li>
+    <li>Your Claude needs you. The call stays on.</li>
+    <li>Stranger is away for a moment. Their Claude needs them. / Stranger is back.</li>
+    <li>Stranger wants to turn on video. Click Show my video to agree.</li>
+    <li>You're both on video now. Try not to look at yourself.</li>
+    <li>Your Claude has finished. Hanging up in 5.</li>
+    <li>Stranger's Claude has finished. Hanging up in 5. / Stranger is gone.</li>
+    <li>Connection evaporated. / Connection wandered off. (one invented word per failure, never an apology)</li>
+    <li>Buttons: Hang up, then Sure?, then Stop waiting. Header: "4 people waiting on their Claudes".</li>
+  </ul>
+
+  <h3>The eleven screens on the canvas</h3>
+  <ol class="small">
+    <li>Terminal: <code>/wait-together on</code> prints the link.</li>
+    <li>Home, faithful 2009, and 2b, home garnished (Q-17).</li>
+    <li>Popup idle: your Claude is not working.</li>
+    <li>Popup waiting: "Hang on."</li>
+    <li>Popup on a call, audio, silhouettes and level meters.</li>
+    <li>Popup with video on, and Hang up clicked once ("Sure?").</li>
+    <li>Popup: your Claude needs you (pale yellow notice, call stays on).</li>
+    <li>Popup: stranger is away for a moment.</li>
+    <li>Popup: your Claude has finished, the big 5.</li>
+    <li>Popup: stranger disconnected, waiting again.</li>
+  </ol>
+
+</section>
+
+<section id="plan">
+  <h2>05 · Build plan</h2>
+  <h3>Alpha scope</h3>
+  <div class="cols">
+    <div class="card"><h4>In the alpha</h4>
+      <ul>
+        <li>Plugin: hooks for started, stopped, paused, tick; <code>/wait-together on|off</code>; a pairing token.</li>
+        <li>Main page: rules, invite code, Start. Opens the popup.</li>
+        <li>Popup: waiting, in call, paused, goodbye, stranger disconnected. Audio, mutual video, Hang up, Report.</li>
+        <li>Lobby: queue, pairing, signaling, grace window, silence timeout, invite code, block list, hang-up limit, kill switch.</li>
+        <li>The 2009 look from section 04.</li>
+      </ul></div>
+    <div class="card"><h4>Not in the alpha</h4>
+      <ul>
+        <li>Accounts or logins. The pairing token is the identity.</li>
+        <li>Typed chat (Q-18), lurker mode (never), a Codex version.</li>
+        <li>Public link on Reddit (Phase 4, behind the checklist).</li>
+        <li>Always-on-top window, mobile, analytics, recordings, video moderation.</li>
+        <li>Task info of any kind shown to the stranger.</li>
+      </ul></div>
+  </div>
+
+  <h3>Phases</h3>
+  <div class="tbl"><table>
+    <tr><th>Phase</th><th>Time</th><th>What gets built</th><th>Done when</th></tr>
+    <tr><td class="k">0 Measure</td><td>1 hour, then a week of normal use</td><td>Install the prototype plugin with a local logger. Run the five pause tests.</td><td>We know the 30 s threshold is right, and have N and G.</td></tr>
+    <tr><td class="k">1 Pair</td><td>a weekend</td><td>Worker + Lobby + popup, no media. Two browsers get paired and see each other's system lines.</td><td>Two windows say "You're now on a call" at the same moment.</td></tr>
+    <tr><td class="k">2 Talk</td><td>a weekend</td><td>Audio, video reveal, countdown, chime, relay credentials, pause rule.</td><td>A real call between your laptop and a friend's, ended by a Claude.</td></tr>
+    <tr><td class="k">3 Friends</td><td>2 weeks</td><td>Invite code, hang-up limit, report, kill switch, the 2009 look, 5 to 10 friends.</td><td>Matches per day, how calls end, and whether anyone keeps the popup open on day three.</td></tr>
+    <tr><td class="k">4 Reddit</td><td>later</td><td>Public checklist from research 04: accounts, terms, privacy notice, a real report path, camera-off default kept, a lawyer's read.</td><td>You are comfortable posting the link.</td></tr>
+  </table></div>
+  <p class="small">Size: about 60 lines of plugin, 250 lines of Worker, 500 lines of page and popup. No framework.</p>
+</section>
+
+<section id="edges">
+  <h2>06 · Edge cases</h2>
+  <div class="tbl"><table>
+    <tr><th>Case</th><th>What happens</th></tr>
+    <tr><td>Quick reply under 30 s</td><td>Nothing. The popup never joins the queue.</td></tr>
+    <tr><td>You press Escape</td><td>No Stop fires. Your next prompt resets the state; otherwise the silence timeout N returns the popup to idle.</td></tr>
+    <tr><td>Claude hits an API error</td><td>StopFailure counts as stopped.</td></tr>
+    <tr><td>You close the terminal</td><td>SessionEnd counts as stopped.</td></tr>
+    <tr><td>You close the popup</td><td>You are simply unavailable. Hooks keep posting; the lobby ignores a token with no window.</td></tr>
+    <tr><td>Mic permission denied or ignored</td><td>Browsers can leave the prompt unanswered forever. After 20 s you drop out of the queue with instructions to reset the permission. Never re-prompt in a loop.</td></tr>
+    <tr><td>Nobody else is waiting</td><td>"Waiting for someone to wait for their Claude..." That is the screen most people see most of the time.</td></tr>
+    <tr><td>Stranger's Claude finishes first</td><td>They see the countdown and leave. You see "Stranger has disconnected" and go back to waiting.</td></tr>
+    <tr><td>Both Claudes finish within a second</td><td>Whichever stop reaches the lobby first ends the call. Fine.</td></tr>
+    <tr><td>Network cannot connect</td><td>Cloudflare's relay is tried. If that fails too, both go back to waiting with a note.</td></tr>
+    <tr><td>A long tool call with no ticks</td><td>Longer than N looks like silence and ends the call early. N is set from the longest gaps seen in Phase 0.</td></tr>
+    <tr><td>Two terminals at once</td><td>Any working Claude counts. The popup tracks a set of sessions.</td></tr>
+    <tr><td>Abuse</td><td>Hang up (limited per hour), Report ends the call and stores the token pair, block list in the lobby, invite code rotated, kill switch turns matching off.</td></tr>
+    <tr><td>Popup blocked by the browser</td><td>The main page becomes the call window.</td></tr>
+  </table></div>
+</section>
+
+<section id="cost">
+  <h2>07 · Free tier</h2>
+  <p>Unchanged from v0.1 and verified in research 03. Static page and lobby run on the Cloudflare Workers free plan with one Durable Object. Audio and video go browser to browser. The relay some networks need has 1,000 GB a month free. The cost is $0 at a hundred five-minute calls a day, and stays $0 until roughly 4,400 calls a day. Audio-first makes the relay share about one sixteenth of video, so the margin is even wider now.</p>
+  <p class="small">One thing to confirm in your dashboard: whether a free account can create a relay key without a card. Fallback: Metered Open Relay, 20 GB a month free. And the lobby must use the hibernating WebSocket API; the non-hibernating one burns most of the free daily budget doing nothing.</p>
+</section>
+
+<section id="plugins">
+  <h2>08 · Plugins, marketplaces, and names</h2>
+  <p>Your questions 1 and 9. The long version, with 94 plugin names and sources, is <span>research 06</span>.</p>
+
+  <h3>Marketplaces in plain terms</h3>
+  <p>A marketplace is just a git repository with one catalog file in it. There is no server and no publish step: Claude Code clones the repo and reads the list. Anthropic runs two. The <strong>official</strong> one (about 290 plugins) is curated by hand and has no application process. The <strong>community</strong> one (about 2,300 plugins) has a real pipeline: validate locally, submit a form on the Console, pass automated safety screening, get pinned to a commit, appear in the catalog the next night.</p>
+  <p>Anyone can also host their own marketplace: a repo with that catalog file, added with <code>/plugin marketplace add owner/repo</code>. Installing shows a "Will install" panel that lists every command, hook, and server the plugin adds. Ours will say it adds six hooks, so the description has to be honest about what they do. For the alpha, friends install straight from a repo with <code>--plugin-dir</code> or from a tiny marketplace of our own; the invite code is what gates the service, not the plugin.</p>
+
+  <h3>How plugins are named</h3>
+  <ul>
+    <li><strong>Lowercase with hyphens, always.</strong> Every one of 2,573 names. Two words is the most common length.</li>
+    <li><strong>Official names are brands</strong> (github, figma, stripe). <strong>Community names describe</strong> (debugging-toolkit, accessibility-audit).</li>
+    <li><strong>The claude- prefix is a minority habit</strong> (6 percent of community, 1 percent of official) and reads as an early-2025 tic.</li>
+    <li><strong>Verb-first names are rare</strong> (about 2 percent), and the ones that work are "deploy-on-aws" shapes: verb, preposition, brand.</li>
+    <li><strong>Puns are a small minority but memorable:</strong> duck-duck-duck, phone-a-friend, hold on, ralph-wiggum (shipped by Anthropic in its demo marketplace).</li>
+    <li><strong>The name is the slash-command namespace</strong>, always <code>/name:command</code>. For a mostly-hook plugin like this one, the name is mostly an install string and a shelf label, which argues for memorable over descriptive.</li>
+  </ul>
+
+  <h3>wait-together, checked</h3>
+  <p><strong>Collisions: clean.</strong> No plugin in either catalog has "wait" in its name. Both npm names are free. The .com is parked and the no-hyphen .com is for sale at a silly price; .app and .dev look free. No product uses the phrase.</p>
+  <p><strong>Two soft flags from the research.</strong> First, "together" already means Together AI inside the plugin search (two plugins), so a search for the word shows their SDKs next to ours. Second, the verb-first shape is rare, and the name says the boring half (the wait) rather than the good half (the stranger, the call, the synchronized ending). Neither is a blocker. Alternatives the agent checked as free: <em>waiting-room</em> (safest), <em>watercooler</em> (sells the payoff), <em>hold-music</em> (the pun people repeat), <em>meanwhile</em>, <em>deskmate</em>. Your call; it is Q-19.</p>
+
+  <h3>Fun plugins that exist today</h3>
+  <ul class="small">
+    <li><strong>cc-group-chat</strong>: several Claude sessions in one shared room, messaging each other. The closest thing to this idea, minus strangers and audio.</li>
+    <li><strong>claude-code-tamagotchi</strong> (435 stars, Hacker News front page): a creature in the status line that you feed by working. Proof that companionship during agent work draws a crowd.</li>
+    <li><strong>claude-code-achievements</strong> (84 stars): Steam-style achievements for your Claude usage.</li>
+    <li><strong>duck-duck-duck</strong> (25 stars): a rubber-duck companion with voice, animation, and optional hardware.</li>
+    <li><strong>claude-music</strong> (21 stars): lofi and jazz in the terminal while Claude works.</li>
+    <li><strong>phone-a-friend</strong>: Claude calls Codex or Gemini for a second opinion. Agents calling agents, not people.</li>
+    <li><strong>claude-voice-cue</strong>: says "Input needed" the instant Claude is waiting on you, via the same PermissionRequest hook we plan to use.</li>
+    <li><strong>idle-timing</strong>: measures idle time and turn duration and shows it after each prompt. A ready reference for our Phase 0 logger.</li>
+    <li><strong>ralph-wiggum</strong>: Anthropic's own demo plugin, named after a Simpsons character. The permission slip for a playful name.</li>
+  </ul>
+  <p class="small">Traction note: apart from the tamagotchi and the achievements plugin, novelty plugins sit at 0 to 30 stars. Low competition, unproven demand.</p>
+
+</section>
+
+<section id="questions">
+  <h2>09 · Open questions</h2>
+  <p>Eleven answered on 2026-09-06 (listed in <span>QUESTIONS.md</span>). Eight open, each with the default the plan assumes.</p>
+  <div class="tbl"><table>
+    <tr><th>#</th><th>Question</th><th>Default assumed</th></tr>
+    <tr><td class="k">Q-12</td><td>By "the pop up", do you mean a separate small window (sits beside the terminal, opened once by a click) or just the page?</td><td>Separate small window.</td></tr>
+    <tr><td class="k">Q-13</td><td>May the stranger see "Stranger is away for a moment (their Claude needs them)"? It reveals availability, not your task. And is a 90-second grace window with the prose-question guess switched on acceptable?</td><td>Yes, 90 s, on.</td></tr>
+    <tr><td class="k">Q-14</td><td>Does "Claude Code Reddit" mean a public link in an r/ClaudeAI post, or inviting Redditors by DM with the invite code?</td><td>DM invites first; public link after the checklist.</td></tr>
+    <tr><td class="k">Q-15</td><td>A quiet "3 people online" line in the footer, or nothing at all?</td><td>One honest footer line.</td></tr>
+    <tr><td class="k">Q-16</td><td>Rename the folder and repo to wait-together now, or wait for the final name?</td><td>Wait.</td></tr>
+    <tr><td class="k">Q-17</td><td>Humor level: the plain 2009 home page or the garnished one (visitor counter, beta sticker, "tell a friend")? Both are on the canvas.</td><td>Mostly plain, one or two garnishes.</td></tr>
+    <tr><td class="k">Q-18</td><td>Add a typed chat line (about 20 lines of code, very 2009, useful when someone cannot talk out loud)?</td><td>Not in alpha; cheap to add.</td></tr>
+    <tr><td class="k">Q-19</td><td>Keep wait-together despite the two soft flags in section 08, or switch to waiting-room, watercooler, or hold-music?</td><td>Keep wait-together for now.</td></tr>
+  </table></div>
+  <p class="small">Two action items for you: check whether a free Cloudflare account can create a relay key without a card, and spend ten minutes searching r/ClaudeAI and r/cursor for anything like this. The research agents cannot read Reddit.</p>
+</section>
+
+<section id="decisions">
+  <h2>10 · Decision log</h2>
+  <p>One line each. Reasons and what each rules out are in <span>DECISIONS.md</span>.</p>
+  <div class="tbl"><table class="decision">
+    <tr><th>#</th><th>Decision</th><th>Status</th></tr>
+    <tr><td>D-01</td><td>Plan first, code later.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-02</td><td>"Working" is UserPromptSubmit to Stop. Observe, never predict.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-03</td><td>One persistent window; hooks never open a browser.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-04</td><td>Hooks go through the cloud lobby, not a local server.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-05</td><td>Hooks are async, print nothing, always exit 0.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-06</td><td>30-second threshold before joining the queue; measured in Phase 0.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-07</td><td>Browser-to-browser media; Cloudflare STUN and TURN.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-08</td><td>One Worker, one Lobby object, hibernation, no database, no accounts.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-09</td><td>Per-machine token; hashed session ids; any session counts.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-10</td><td>Call ends when the starting wait ends; 5-second goodbye.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-11</td><td>Waiting alone is the default state.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-12</td><td>Consent in three layers; mic on match, camera on mutual reveal.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-13</td><td>Safety alpha: invite code, rules, hang-up limit, report, block, cap, kill switch, never record.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-14</td><td>Chime and the 2009 title flash; always-on-top window later.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-15</td><td>Name recommendation "Meanwhile".</td><td><span class="chip">superseded by D-27</span></td></tr>
+    <tr><td>D-16</td><td>index.html is the plan; research stays in Markdown.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-17</td><td>Phase 0 is instrumentation only.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-18</td><td>PostToolUse heartbeat feeds the silence timeout.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-19</td><td>Interrupt safety: silence timeout, StopFailure, SessionEnd, idempotent start.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-20</td><td>Audio first; video by mutual click.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-21</td><td>PermissionRequest hook as a passive observer.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-22</td><td>Plugin ships disabled; state at a fixed path.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-23</td><td>Signal script sends only token, event, session hash.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-24</td><td>360p video, Opus audio.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-25</td><td>"Stranger left" comes from the socket, not media state.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-26</td><td>Opening question "What is your Claude doing?"</td><td><span class="chip">superseded by D-30</span></td></tr>
+    <tr><td>D-27</td><td>Working name wait-together; folder unchanged until confirmed.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-28</td><td>Two audience tiers: friends, then r/ClaudeAI behind the public checklist.</td><td><span class="chip">proposed</span> Q-14</td></tr>
+    <tr><td>D-29</td><td>No lurker mode, ever. Codex version out of scope.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-30</td><td>The stranger sees nothing about your task, only the goodbye countdown.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-31</td><td>The pause rule: exact signals keep the call on; prose questions get a grace window.</td><td><span class="chip">proposed</span> Q-13</td></tr>
+    <tr><td>D-32</td><td>Hosting on workers.dev, same account, no byproductlab.com.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-33</td><td>No office hours; the screen just waits.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-34</td><td>The call lives in a small popup window.</td><td><span class="chip">proposed</span> Q-12</td></tr>
+    <tr><td>D-35</td><td>Homage stance: our own name, words, and logo; the era's grammar.</td><td><span class="chip">proposed</span></td></tr>
+    <tr><td>D-36</td><td>Static mockups, about eight artboards, inline SVG only.</td><td><span class="chip">accepted</span></td></tr>
+    <tr><td>D-37</td><td>Plan v0.2 replaces v0.1; v0.1 archived.</td><td><span class="chip">accepted</span></td></tr>
+  </table></div>
+</section>
+
+<section id="changes">
+  <h2>11 · Change log</h2>
+  <div class="tbl"><table>
+    <tr><th>Date</th><th>Change</th></tr>
+    <tr><td class="k">2026-09-06</td><td><strong>v0.2.</strong> Eleven questions answered, seven new ones. Name wait-together. Decisions D-27 to D-37 added; D-05, D-09, D-10, D-11, D-20 accepted; D-15 and D-26 superseded. New sections: the pause rule (03), the look (04), plugins and names (08). Concept review folded into one paragraph. Two research memos added (05, 06). Mockup canvas added under <code>design/</code>. v0.1 archived.</td></tr>
+    <tr><td class="k">2026-09-05</td><td><strong>v0.1.</strong> Project folder, four research memos, first plan, decisions D-01 to D-26, questions Q-01 to Q-11, tested plugin skeleton under <code>prototype/plugin/</code>.</td></tr>
+  </table></div>
+</section>
+
+<section id="files">
+  <h2>12 · Files and sources</h2>
+  <p>Why the idea holds up, its art and product lineage, and the honest weaknesses are in the v0.1 plan, <span>archived here</span>, and in research memos 01 and 04. Nothing there changed.</p>
+  <div class="tbl"><table>
+    <tr><th>Path</th><th>What it is</th></tr>
+    <tr><td class="k">docs/index.html</td><td>This plan, v0.2.</td></tr>
+    <tr><td class="k">docs/DECISIONS.md · QUESTIONS.md · CHANGELOG.md</td><td>Decision log with reasons; answered and open questions; changes by date.</td></tr>
+    <tr><td class="k">docs/archive/plan-v0.1.html</td><td>The first plan: concept review, lineage, systems and design thinking, liquidity math.</td></tr>
+    <tr><td class="k">docs/research/01 to 04</td><td>Art and theory lineage; plugin mechanics (verified on Claude Code 2.1.261); free hosting and WebRTC; product history and safety.</td></tr>
+    <tr><td class="k">docs/research/05-omegle-ui-and-2009-web-design.md</td><td>Omegle's real 2009 CSS from Wayback captures; 2009 web grammar; the homage style guide.</td></tr>
+    <tr><td class="k">docs/research/06-plugin-ecosystem-and-naming.md</td><td>Marketplaces explained; 60+ plugin names; naming patterns; fun plugins; wait-together collision check.</td></tr>
+    <tr><td class="k">design/</td><td>Mockup working files (one .dc.html per screen) and the seeded canvas.</td></tr>
+    <tr><td class="k">prototype/plugin/</td><td>Validated plugin skeleton, the Phase 0 starting point.</td></tr>
+  </table></div>
+</section>
+
+<footer>
+  wait-together plan v0.2 · 2026-09-06 · written with Claude Code (Fable 5.1) and Opus 5 research agents · everything marked "proposed" is waiting for David.
+</footer>
+</main>
+</div>
+
+</body>
+</html>
