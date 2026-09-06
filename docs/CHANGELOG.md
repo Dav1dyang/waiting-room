@@ -11,6 +11,8 @@ Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 - Mockup v2.3: Knock artboard removed (ten artboards), Main shows the automatic entry, setup and terminal copy updated.
 - D-83: arm threshold 15 s (was 30 s), David's change; every "30 s" in the plan, the mockup, and the scripts follows. D-84: the rehearsal rides the next hook instead of a popup.
 - Build started: repo initialised on `main` with the docs and design baseline; the alpha is built on `feat/alpha`.
+- Lobby core built as a pure state machine (worker/src/lobby-core.js) with docs/PROTOCOL.md as the contract, 24 node:test cases, a mock lobby, and eleven hook fixtures. D-85 logs the model as built.
+- Codex review of the core (12 findings) applied: tickets bound to their task and dropped at task end; signal frames scoped to a room id; connection ids on socket events so a late close from an old socket cannot touch a new window; token names checked with own-property lookups (no "constructor" or "__proto__" surprises); a pause can no longer open a window before T; rehearsal waits while a real window is live; the open retry only applies when no window ever connected; quiet-room timing tracks speech start and stop; peer cooldown is per pair; a task restarted during the goodbye keeps its window; the count leaves out paused and blocked people. 33 tests pass.
 - Memos 09 and 10 final (agents finished); memo 09 gained the exemplar section.
 
 ## 2026-09-06 (v0.4, third round of answers)
