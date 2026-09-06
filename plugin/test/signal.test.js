@@ -63,8 +63,10 @@ test('every hook fixture reaches the lobby as the right word', async (t) => {
     const run = await runSignal(readFixture(name), home, { WAITING_ROOM_URL: lobby.url });
     assertSilent(run, name);
 
-    assert.strictEqual(lobby.requests.length, 1, `${name}: exactly one POST`);
-    const req = lobby.requests[0];
+    // A stop also schedules a delayed GET on the count route (the browser reaper); only hook POSTs count here.
+    const posts = lobby.requests.filter((r) => r.method === 'POST');
+    assert.strictEqual(posts.length, 1, `${name}: exactly one POST`);
+    const req = posts[0];
     assert.strictEqual(req.method, 'POST');
     assert.strictEqual(req.path, '/api/hook');
 

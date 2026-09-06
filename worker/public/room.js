@@ -570,7 +570,22 @@ async function runProbe() {
   } catch {
     micPermission = 'unavailable';
   }
-  const mediaStreamAutoplay = await probeMediaStreamAutoplay();
+  let mediaStreamAutoplay = await probeMediaStreamAutoplay();
+  // With the mic already allowed (the setup page did that), capture is what unlocks audio in
+  // Chrome. Measure the real path once: capture, then check the context and autoplay again.
+  let afterCapture = null;
+  if (micPermission === 'granted') {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const contextState = await sound.resumeAudio();
+      const autoplay = await probeMediaStreamAutoplay();
+      for (const track of stream.getTracks()) track.stop();
+      afterCapture = { contextState, autoplay };
+      if (autoplay.ok) mediaStreamAutoplay = autoplay;
+    } catch (err) {
+      afterCapture = { error: String(err) };
+    }
+  }
 
   const data = {
     hasFocus: document.hasFocus(),
@@ -583,6 +598,7 @@ async function runProbe() {
     notificationPermission: typeof Notification === 'undefined' ? 'unavailable' : Notification.permission,
     micPermission,
     mediaStreamAutoplay,
+    afterCapture,
     selfCloseSupported: { openerNull: window.opener === null, historyLength: history.length },
     probeMode,
     timings: { loadToProbeMs: Math.round(t0), probeMs: Math.round(performance.now() - t0) },

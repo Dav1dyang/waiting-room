@@ -56,11 +56,8 @@ export async function resumeAudio() {
   const c = audioContext();
   if (!c) return 'missing';
   if (c.state === 'suspended') {
-    try {
-      await c.resume();
-    } catch {
-      // no gesture yet; the caller falls back
-    }
+    // Without a gesture Chrome leaves resume() pending forever, so give it 400 ms and move on.
+    await Promise.race([c.resume().catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
   }
   return c.state;
 }

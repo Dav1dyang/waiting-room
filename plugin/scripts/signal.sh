@@ -32,6 +32,13 @@ REPLY="$(printf '%s' "$BODY" | curl -s -m 3 --connect-timeout 1 \
   "$ENDPOINT/api/hook" 2>/dev/null || true)"
 [ -n "$REPLY" ] || exit 0
 
+# After a stop with nothing on screen the lobby says so, and the plugin's Chrome can go.
+# After any stop, ask again a few seconds later, once the goodbye countdown has run (D-87).
+case "$REPLY" in *'"quit":true'*) wr_quit_chrome ;; esac
+case "$BODY" in
+  *'"event":"stopped"'*) ( sleep "$WR_IDLE_WAIT"; wr_quit_if_idle ) >/dev/null 2>&1 & ;;
+esac
+
 # The lobby answers {} most of the time, and {"open": "https://.../room?t=..."} at most
 # once per task.
 URL="$(printf '%s' "$REPLY" | node -e '

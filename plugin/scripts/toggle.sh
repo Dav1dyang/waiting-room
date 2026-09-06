@@ -22,7 +22,7 @@ say() {
       printf '%s\n' "Nothing is recorded."
       printf '%s\n' "Be kind. Report is one click."
       ;;
-    setup)       printf '%s\n' "Set up once (mic, notifications, sound, a test window, your desktop tint):" ;;
+    setup)       printf '%s\n' "Set up once. A page just opened in its own Chrome window (mic, notifications, sound, a test window, your tint). If it did not, open this:" ;;
     nobody)      printf '%s\n' "Nobody else is waiting right now. That is normal." ;;
     one_other)   printf '%s\n' "1 other is waiting for their Claude." ;;
     n_others)    printf '%s\n' "${2} others are waiting for their Claude." ;;
@@ -141,6 +141,7 @@ do_on() {
   if [ -n "$setup" ]; then
     say setup
     say line "$setup"
+    wr_open_setup "$setup"
     say blank
   fi
   count_line "$count"
@@ -150,6 +151,7 @@ do_on() {
 }
 
 do_off() {
+  wr_quit_chrome
   local token endpoint
   token="$(wr_token)"
   endpoint="$(wr_endpoint)"
