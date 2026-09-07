@@ -63,7 +63,9 @@ test('every hook fixture reaches the lobby as the right word', async (t) => {
     const run = await runSignal(readFixture(name), home, { WAITING_ROOM_URL: lobby.url });
     assertSilent(run, name);
 
-    // A stop also schedules a delayed GET on the count route (the browser reaper); only hook POSTs count here.
+    // A stop is delivered by a detached process, so give it a moment; a stop also schedules a
+    // delayed GET on the count route (the browser reaper), so only hook POSTs count here.
+    await until(() => lobby.requests.some((r) => r.method === 'POST'), 3000);
     const posts = lobby.requests.filter((r) => r.method === 'POST');
     assert.strictEqual(posts.length, 1, `${name}: exactly one POST`);
     const req = posts[0];
@@ -89,7 +91,8 @@ test('nothing about the task leaves the machine', async (t) => {
   for (const [name] of CASES) {
     lobby.requests.length = 0;
     await runSignal(readFixture(name), home, { WAITING_ROOM_URL: lobby.url });
-    const raw = lobby.requests[0].raw;
+    await until(() => lobby.requests.some((r) => r.method === 'POST'), 3000);
+    const raw = lobby.requests.find((r) => r.method === 'POST').raw;
     for (const secret of SECRETS) {
       assert.ok(!raw.includes(secret), `${name}: body must not contain ${JSON.stringify(secret)}`);
     }

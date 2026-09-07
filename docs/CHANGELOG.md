@@ -11,6 +11,7 @@ Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 - Deployed to workers.dev on the free plan with the invite code as a secret; real Claude Code hooks (`claude -p`) opened a room URL at 26 s against the live lobby; the ten end-to-end cases pass against it too.
 - Opt-in hook log (`WAITING_ROOM_LOG`) for the Phase 0 week; `WAITING_ROOM_DIR` for tests.
 - Root README rewritten for the built repo; plugin and worker READMEs by the builders.
+- The internal code review of the whole branch was cut short by the session limit; its one finished verifier confirmed that background hook work can die at session teardown, fixed by a detached delivery step (D-89).
 - Codex copy review (43 notes): the clarity and privacy-scope fixes applied across the window, the setup page, the terminal, the commands, and the READMEs; the chatroom voice kept on purpose (D-88). The internal code review of the whole branch ran after the build.
 
 ## 2026-09-06 (v0.5, fourth round of answers)

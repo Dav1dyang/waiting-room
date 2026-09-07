@@ -95,6 +95,18 @@ wr_is_enabled() {
   [ -f "$WR_FLAG_FILE" ]
 }
 
+# Run a command in its own session, with no pipes and no tty, so a hook teardown cannot kill it.
+# Claude Code kills async hooks still running when a session ends; the window opener, the lock
+# release, the idle check, and the "stopped" delivery must outlive that.
+wr_detach() {
+  if command -v node >/dev/null 2>&1; then
+    node -e 'const { spawn } = require("node:child_process"); spawn(process.argv[1], process.argv.slice(2), { detached: true, stdio: "ignore" }).unref();' "$@" >/dev/null 2>&1 || true
+  else
+    ( "$@" ) >/dev/null 2>&1 < /dev/null &
+  fi
+  return 0
+}
+
 # Open the room window, behind whatever you are looking at, in the plugin's own Chrome.
 # WAITING_ROOM_OPEN_CMD replaces the whole thing; the URL arrives as its one argument.
 # The tests use that to capture the URL instead of launching a browser.
