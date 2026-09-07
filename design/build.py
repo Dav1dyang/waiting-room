@@ -25,7 +25,7 @@ DESK = TINTS[0][1]
 CYAN, BLUSH = '#B7E7E8', '#FBD0D0'       # the one default action; hang up
 CHI = "'ChiKareGo2', 'Chicago', Geneva, Verdana, sans-serif"
 GEN = "Geneva, Verdana, 'Lucida Grande', sans-serif"
-TB, TOPIC, PAD, LOGH, STATUS, CTL, FEEDH = 20, 22, 6, 106, 22, 44, 99
+TB, TOPIC, PAD, LOGH, STATUS, CTL, FEEDH = 20, 24, 6, 106, 22, 44, 99
 
 FONT_B64 = ''
 if os.path.exists('fonts/ChiKareGo2.ttf'):
@@ -163,7 +163,7 @@ body{margin:0;background:@DESK}
 .tb .zoom:after{content:'';position:absolute;left:0;top:0;width:6px;height:6px;border-right:1px solid @INK;border-bottom:1px solid @INK}
 .tb .shadebox{right:24px}
 .tb .shadebox .ic{position:absolute;left:-1px;top:-1px}
-.topic{height:@TOPICpx;padding:0 9px;border-top:1px solid @INK;background:@CREAM;font:10px/21px @GEN;white-space:nowrap;overflow:hidden;display:flex;align-items:center;gap:6px}
+.topic{min-height:@TOPICpx;padding:4px 9px 3px;border-top:1px solid @INK;background:@CREAM;font:12px/16px @GEN;display:flex;align-items:flex-start;gap:6px}.topic .ic,.topic .dot,.topic .live{margin-top:4px}.topic .text{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-width:0}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:@PAPER;border:1px solid @INK}
 .live{display:inline-block;width:4px;height:4px;border-radius:50%;background:@LIVE;box-shadow:0 0 0 3px rgba(208,29,33,.28);margin:0 3px 0 2px}
 .body{padding:@PADpx;border-top:1px solid @INK;background:@CREAM}
@@ -181,7 +181,7 @@ body{margin:0;background:@DESK}
 .sb .up:after{content:'';position:absolute;left:3px;top:4px;border:4px solid transparent;border-top:0;border-bottom:5px solid @INK}
 .sb .dn:after{content:'';position:absolute;left:3px;top:5px;border:4px solid transparent;border-bottom:0;border-top:5px solid @INK}
 .sb .thumb{position:absolute;left:0;width:15px;height:24px;background:@PAPER;border-top:1px solid @INK;border-bottom:1px solid @INK}
-.status{height:@STATUSpx;margin-top:@PADpx;padding:0 2px;font:10px/22px @GEN;display:flex;justify-content:space-between;align-items:center;white-space:nowrap}
+.status{height:@STATUSpx;margin-top:@PADpx;padding:0 2px;font:11px/22px @GEN;display:flex;justify-content:space-between;align-items:center;white-space:nowrap}
 .status > span{display:inline-flex;align-items:center;gap:6px}
 .meter{display:inline-flex !important;align-items:flex-end !important;gap:1px !important;width:84px;height:11px;border-bottom:1px solid @INK;padding-bottom:0;flex:none;overflow:hidden}
 .meter i{display:block;width:2px;background:@INK;flex:none}
@@ -192,7 +192,7 @@ body{margin:0;background:@DESK}
 .btn.blush{background:@BLUSH}
 .btn.dis{color:#999;border-color:#000;border-style:dotted;background:@CREAM;box-shadow:none}
 .btn.def{box-shadow:0 1px 0 0 @INK,0 0 0 2px @PAPER,0 0 0 5px @INK}
-.snd{display:inline-flex;align-items:center;gap:5px;font:10px/12px @GEN;margin-left:auto;white-space:nowrap}
+.snd{display:inline-flex;align-items:center;gap:5px;font:11px/12px @GEN;margin-left:auto;white-space:nowrap}
 .stage{display:flex;gap:@PADpx;margin-bottom:@PADpx}
 .feed{position:relative;flex:1;height:@FEEDHpx;border:1px solid @INK;background:@PAPER;overflow:hidden}
 .feed .scene{position:absolute;inset:0;background:linear-gradient(180deg,#A9D6E6 0%,#F4E3CB 58%,#D8B892 100%);filter:contrast(1.12) saturate(.9) sepia(.08)}

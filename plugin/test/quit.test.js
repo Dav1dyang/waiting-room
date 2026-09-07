@@ -57,6 +57,23 @@ test('after a stop, the plugin asks the lobby and quits only when no window is u
   }
 });
 
+test('the reaper leaves the browser alone while an open is in flight', async () => {
+  const lobby = await startLobby();
+  const { home, dir } = makeHome();
+  const q = quitMarker(home);
+  try {
+    lobby.reply.hook = {};
+    lobby.reply.count = { count: 0, enabled: true, window: false };
+    fs.mkdirSync(path.join(dir, 'opening.lock'), { recursive: true }); // fresh: someone is opening
+    await runSignal(readFixture('stop-plain'), home, { WAITING_ROOM_URL: lobby.url, WAITING_ROOM_QUIT_CMD: q.cmd, WAITING_ROOM_IDLE_WAIT: '0.2' });
+    await sleep(900);
+    assert.ok(!q.hit(), 'the lock is held, so no quit');
+  } finally {
+    await lobby.close();
+    removeHome(home);
+  }
+});
+
 test('a tick never asks about quitting', async () => {
   const lobby = await startLobby();
   const { home } = makeHome();

@@ -7,6 +7,7 @@ Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 - Checklist run on David's Mac with the installed plugin: mic and notifications granted in the plugin's Chrome profile, the test window and a real window opened through real hooks, the hook log is on for the week. Two findings.
 - Focus: a room window opened into a Chrome instance that had been in front (the setup page) took focus. Fixed: an ordinary open quits the running instance and launches hidden; a test window, marked `rehearsal: true` by the lobby, keeps it (D-93). Plugin test added.
 - Type and padding: the count line was 10 px aliased and smudged on a 2x display, and the frame was cut by the window's rounded corners. Geneva is smoothed, the count line is 12 px and may wrap to two lines, small labels go up one size, the desk shows 8/6/10 px around the panel, and the shaded window sizes itself to the panel (D-94). Mockup v2.4 regenerated and the canvas republished.
+- Codex review of the fixes (D-95): the opening lock carries an owner and the reaper runs under it, the quit-wait fails on timeout, the core refuses a second ticket while a window exists, the profile path is quoted and escaped, the unrolled window grows with a two-line count line. The mockup generator had missed the D-94 tokens; regenerated and republished.
 - Installed from the private GitHub marketplace on David's Mac to prove the path; the plugin README warns about running the checkout beside an installed copy.
 
 ## 2026-09-06 (v0.6, the alpha built)

@@ -101,7 +101,10 @@ function sizeFor() {
     const need = Math.ceil(el.win.getBoundingClientRect().height) + EDGE_Y + chromeBar();
     return [SIZES.shaded[0], Math.max(SIZES.shaded[1], need)];
   }
-  return stageVisible() ? SIZES.video : SIZES.room;
+  // Unrolled, a two-line count line takes its extra height from the window, not from the log.
+  const extra = Math.max(0, el.topic.offsetHeight - 24);
+  const [w, h] = stageVisible() ? SIZES.video : SIZES.room;
+  return [w, h + extra];
 }
 
 function applySize() {
