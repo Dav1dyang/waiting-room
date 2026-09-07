@@ -204,7 +204,7 @@ export class Lobby {
       t.rehearse = false;
       t.lastRehearsalAt = now;
       const ticket = this.makeTicket(token, now, true, null);
-      return this.reply({ open: origin + '/room?t=' + ticket });
+      return this.reply({ open: origin + '/room?t=' + ticket, rehearsal: true });
     }
     const task = t.task;
     const pastT = task && now - task.startedAt >= this.cfg.T;

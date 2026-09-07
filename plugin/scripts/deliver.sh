@@ -15,7 +15,8 @@ WR_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 case "${1:-}" in
   --open)
-    wr_open_url "${2:-}"
+    # "--keep": a test window; leave the running instance (and the setup page in it) alone.
+    if [ "${3:-}" = "--keep" ]; then WR_KEEP_INSTANCE=1 wr_open_url "${2:-}"; else wr_open_url "${2:-}"; fi
     sleep "$WR_LOCK_HOLD"
     rmdir "$WR_LOCK_DIR" 2>/dev/null || true
     exit 0
@@ -71,6 +72,8 @@ process.stdin.on("end", () => {
   } catch (e) {}
 });' 2>/dev/null || true)"
 [ -n "$URL" ] || exit 0
+KEEP=""
+case "$REPLY" in *'"rehearsal":true'*) KEEP="--keep" ;; esac
 # A room lives on our lobby at /room. Anything else is a broken lobby, and we do not open it.
 wr_url_ok "$URL" /room || exit 0
 
@@ -98,7 +101,7 @@ fi
 if mkdir "$WR_LOCK_DIR" 2>/dev/null; then
   # The opener outlives this hook and releases the lock a few seconds after the open, so the
   # hooks right behind this one stay quiet. Detached, so a teardown cannot leave the lock stuck.
-  wr_detach bash "$WR_HERE/deliver.sh" --open "$URL"
+  wr_detach bash "$WR_HERE/deliver.sh" --open "$URL" $KEEP
 fi
 
 exit 0
