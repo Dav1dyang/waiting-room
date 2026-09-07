@@ -48,7 +48,7 @@ claude plugin validate --strict ../plugin
 bash ../scripts/probe-mac.sh          # one real window on this Mac (needs Google Chrome)
 ```
 
-Set `WAITING_ROOM_LOG=~/.waiting-room/log.txt` in your shell for a week and every hook appends one line, the five fields and the reply: that is the Phase 0 log the timing numbers come from.
+Set `WAITING_ROOM_LOG=~/.waiting-room/log.txt` in your shell for a week and every hook appends one line, the five fields and what the reply was (open, quit, or nothing): that is the Phase 0 log the timing numbers come from.
 
 ## Look
 

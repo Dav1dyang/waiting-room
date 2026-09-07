@@ -175,6 +175,42 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
   await waitFor(c, (m) => m.type === 'line' && m.key === 'rehearsal');
   assert.deepEqual((await get('/api/count?t=' + C)).body, { count: 0, enabled: true, window: true }, 'a rehearsal joins no queue');
   c.ws.close();
+
+  // Nobody asked: a token nobody registered gets no count, and an oversized body is refused
+  // before it is read whole.
+  assert.deepEqual((await get('/api/count?t=nobodyzzzz9')).body, { count: 0, enabled: false, window: false });
+  const big = await fetch(base + '/api/hook', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{"token":"' + 'x'.repeat(5000) + '"}',
+  });
+  assert.equal(big.status, 400);
+
+  // A window that floods the lobby is closed with 1008.
+  const D = 'tokenddddd4';
+  assert.equal((await post('/api/register', { token: D, invite: 'DUCK' })).body.ok, true);
+  await post('/api/hook', { token: D, event: 'started' });
+  await sleep(1300);
+  const openD = (await post('/api/hook', { token: D, event: 'tick' })).body.open;
+  assert.ok(openD, 'a window for D');
+  const d = connect(openD);
+  await waitFor(d, (m) => m.type === 'hello');
+  for (let i = 0; i < 200; i += 1) send(d, { type: 'speech', active: i % 2 === 0 });
+  assert.equal(await closedCode(d), 1008, 'flooding closes the socket');
+
+  // Invite guessing: ten wrong codes, then registration answers 429 for a while.
+  // Last in the file on purpose: wrangler dev has no client address, so every caller shares one.
+  // One wrong code was already tried at the top of this test, so the door shuts within ten more.
+  let busyAt = -1;
+  for (let i = 0; i < 12 && busyAt < 0; i += 1) {
+    const r = await post('/api/register', { token: 'guesserrrr' + i, invite: 'NOPE' + i });
+    if (r.res.status === 429) busyAt = i;
+    else assert.deepEqual(r.body, { ok: false, error: 'invite' });
+  }
+  assert.ok(busyAt >= 8 && busyAt <= 10, 'ten wrong codes, then 429; got it at ' + busyAt);
+  const blocked = await post('/api/register', { token: 'guesserrrr9', invite: 'DUCK' });
+  assert.equal(blocked.res.status, 429, 'even the right code waits now');
+  assert.deepEqual(blocked.body, { ok: false, error: 'busy' });
 });
 
 // ---------- helpers ----------

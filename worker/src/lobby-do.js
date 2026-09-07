@@ -17,6 +17,15 @@ const MS_VARS = ['T', 'F', 'N', 'G', 'P', 'Q', 'ROOM_MAX', 'PEER_COOLDOWN', 'OPE
   'COUNTDOWN', 'MAX_OPENS', 'RECONNECT_GRACE', 'SETUP_GRACE', 'REHEARSAL_GRACE'];
 const POST_KINDS = { '/api/register': 'register', '/api/hook': 'hook', '/api/off': 'off', '/api/rehearse': 'rehearse' };
 const HOOKS_PER_SECOND = 10;
+// A window sends a handful of frames a second at most (ICE bursts, speech edges, one probe).
+const FRAME_RATE = 40;
+const FRAME_BURST = 120;
+// Invite guessing: ten wrong codes from one address in ten minutes, three hundred from everyone
+// in an hour, and registration answers 429 until the window passes. The plugin says "try again".
+const REG_FAILS_IP = 10;
+const REG_FAILS_IP_MS = 600_000;
+const REG_FAILS_ALL = 300;
+const REG_FAILS_ALL_MS = 3_600_000;
 const TICK_MS = 1000;
 // Frames bigger than this are nonsense; an SDP offer with video is a few kilobytes.
 const MAX_FRAME = 65536;
@@ -27,6 +36,9 @@ export class LobbyObject extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.hits = new Map();
+    this.frames = new WeakMap();
+    this.regFails = new Map();
+    this.regFailsAll = { n: 0, until: 0 };
     ctx.blockConcurrencyWhile(async () => {
       const saved = await ctx.storage.get('state');
       this.lobby = new Lobby(cfgFrom(env), saved || null);
@@ -41,6 +53,7 @@ export class LobbyObject extends DurableObject {
     const url = new URL(request.url);
     const now = Date.now();
     const origin = request.headers.get('x-wr-origin') || url.origin;
+    const ip = request.headers.get('x-wr-ip') || '';
 
     if (url.pathname === '/ws') return this.openSocket(url, now);
 
@@ -59,7 +72,9 @@ export class LobbyObject extends DurableObject {
     }
     if (!body || typeof body !== 'object') return json({ error: 'json' }, 400);
     const token = typeof body.token === 'string' ? body.token : '';
-    if (kind === 'hook' && !this.allowHook(token, now)) return json({});
+    // A hook from a token nobody registered changes nothing and never touches the limiter.
+    if (kind === 'hook' && (!this.lobby.tok(token) || !this.allowHook(token, now))) return json({});
+    if (kind === 'register' && !this.allowRegister(ip, now)) return json({ ok: false, error: 'busy' }, 429);
     // Only the fields the core reads are copied across, so a body can never set its own event kind.
     const ev = { kind, token, now, origin };
     if (kind === 'register') ev.invite = typeof body.invite === 'string' ? body.invite : '';
@@ -71,7 +86,9 @@ export class LobbyObject extends DurableObject {
       ev.session = typeof body.session === 'string' ? body.session.slice(0, 32) : '';
       if (Number.isFinite(body.ts)) ev.ts = body.ts;
     }
-    return json(await this.run(ev));
+    const out = await this.run(ev);
+    if (kind === 'register' && out && out.error === 'invite') this.noteRegisterFailure(ip, now);
+    return json(out);
   }
 
   /** Ten hooks a second per token is plenty; the rest get an empty answer and change nothing. */
@@ -87,6 +104,41 @@ export class LobbyObject extends DurableObject {
       for (const [k, v] of this.hits) if (v.sec !== sec) this.hits.delete(k);
     }
     return hit.n <= HOOKS_PER_SECOND;
+  }
+
+  allowRegister(ip, now) {
+    const byIp = this.regFails.get(ip);
+    if (byIp && byIp.until > now && byIp.n >= REG_FAILS_IP) return false;
+    if (this.regFailsAll.until > now && this.regFailsAll.n >= REG_FAILS_ALL) return false;
+    return true;
+  }
+
+  noteRegisterFailure(ip, now) {
+    let byIp = this.regFails.get(ip);
+    if (!byIp || byIp.until <= now) {
+      byIp = { n: 0, until: now + REG_FAILS_IP_MS };
+      this.regFails.set(ip, byIp);
+    }
+    byIp.n += 1;
+    if (this.regFails.size > 1000) {
+      for (const [k, v] of this.regFails) if (v.until <= now) this.regFails.delete(k);
+    }
+    if (this.regFailsAll.until <= now) this.regFailsAll = { n: 0, until: now + REG_FAILS_ALL_MS };
+    this.regFailsAll.n += 1;
+  }
+
+  /** A token bucket per socket. Past it the socket is closed with 1008 and the core told. */
+  allowFrame(ws, now) {
+    let b = this.frames.get(ws);
+    if (!b) {
+      b = { tokens: FRAME_BURST, at: now };
+      this.frames.set(ws, b);
+    }
+    b.tokens = Math.min(FRAME_BURST, b.tokens + ((now - b.at) / 1000) * FRAME_RATE);
+    b.at = now;
+    if (b.tokens < 1) return false;
+    b.tokens -= 1;
+    return true;
   }
 
   // ---------- sockets ----------
@@ -121,7 +173,18 @@ export class LobbyObject extends DurableObject {
 
   async webSocketMessage(ws, data) {
     const who = whoIs(this.ctx, ws);
-    if (!who || who.rehearsal) return; // rehearsal windows are talked at, never listened to
+    if (!who) return dropSocket(ws); // no attachment: nothing vouches for this socket
+    if (who.rehearsal) return; // rehearsal windows are talked at, never listened to
+    const now = Date.now();
+    if (!this.allowFrame(ws, now)) {
+      try {
+        ws.close(1008, 'too fast');
+      } catch {
+        // already gone
+      }
+      await this.run({ kind: 'ws_close', token: who.token, conn: who.conn, rehearsal: false, now });
+      return;
+    }
     const text = typeof data === 'string' ? data : new TextDecoder().decode(data);
     if (text.length > MAX_FRAME) return;
     let msg;
@@ -232,15 +295,26 @@ function cfgFrom(env) {
   return cfg;
 }
 
-/** Which window is this socket? The attachment survives hibernation; the tag is the fallback. */
+/**
+ * Which window is this socket? The attachment survives hibernation and names the connection.
+ * A socket without one gets no say: a null conn would read as "any connection" in the core.
+ */
 function whoIs(ctx, ws) {
-  const att = ws.deserializeAttachment();
-  if (att && att.token) return att;
-  const tag = ctx.getTags(ws)[0];
-  if (!tag) return null;
-  return tag.startsWith('r:')
-    ? { token: tag.slice(2), rehearsal: true, conn: null }
-    : { token: tag, rehearsal: false, conn: null };
+  let att = null;
+  try {
+    att = ws.deserializeAttachment();
+  } catch {
+    att = null;
+  }
+  return att && typeof att.token === 'string' && att.token && att.conn ? att : null;
+}
+
+function dropSocket(ws) {
+  try {
+    ws.close(4001, 'stale');
+  } catch {
+    // already gone
+  }
 }
 
 function json(body, status = 200) {

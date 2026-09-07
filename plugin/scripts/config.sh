@@ -32,9 +32,26 @@ WR_LOCK_STALE=30
 # How long the winner holds the lock, so the hooks firing right behind it stay quiet.
 WR_LOCK_HOLD=5
 
+# The token and the invite are secrets for this user only, and the log is theirs too.
+umask 077
+
 # Make the state directory if this is the first run. Never fails loudly.
 wr_dir() {
   mkdir -p "$WR_DIR" 2>/dev/null || true
+  chmod 700 "$WR_DIR" 2>/dev/null || true
+}
+
+# A URL the lobby hands us is only opened if it lives on the configured lobby, at the path we
+# expect, and is made of URL characters. Anything else is neither opened nor printed.
+wr_url_ok() {
+  local url="$1" path="$2" base
+  base="$(wr_endpoint)"
+  case "$url" in
+    "$base$path"|"$base$path?"*) ;;
+    *) return 1 ;;
+  esac
+  case "$url" in *[!A-Za-z0-9:/?=\&._~%-]*) return 1 ;; esac
+  return 0
 }
 
 # The lobby URL: the environment first, then the file, then the built-in default.

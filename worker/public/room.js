@@ -156,9 +156,7 @@ function connect() {
     return scheduleReconnect();
   }
   state.ws = ws;
-  ws.onopen = () => {
-    state.attempts = 0;
-  };
+  ws.onopen = () => {};
   ws.onmessage = (ev) => {
     let msg;
     try {
@@ -216,6 +214,7 @@ function stale() {
 function handle(msg) {
   switch (msg.type) {
     case 'hello':
+      state.attempts = 0; // a real hello, not just an open socket, resets the backoff
       state.greeted = true;
       state.others = msg.others || 0;
       if (msg.rehearsal) {
@@ -483,7 +482,15 @@ function wireButtons() {
     send({ type: 'report' });
   };
   el.videoBtn.onclick = async () => {
-    if (el.videoBtn.disabled || !peer) return;
+    if (el.videoBtn.disabled || !peer || state.videoBusy) return;
+    state.videoBusy = true;
+    try {
+      await toggleVideo();
+    } finally {
+      state.videoBusy = false;
+    }
+  };
+  async function toggleVideo() {
     if (state.localVideoOn) {
       peer.removeVideo();
       stopStream(el.localVideo.srcObject);
@@ -503,7 +510,7 @@ function wireButtons() {
     } catch {
       // camera refused; the button stays as it was
     }
-  };
+  }
   el.sounds.onclick = () => {
     const on = sound.setSounds(!sound.soundsEnabled());
     el.soundIcon.setAttribute('data-icon', on ? 'speaker' : 'muted');
@@ -514,6 +521,10 @@ function wireButtons() {
   el.door.onclick = () => {
     send({ type: 'bye', reason: 'manual' });
     state.told = true;
+    if (peer) {
+      peer.close(); // the mic and camera stop now, whether or not the window manages to close
+      peer = null;
+    }
     closeSelf();
   };
   el.shadebox.onclick = toggleUserShade;
@@ -680,10 +691,14 @@ function start() {
   if (!ticket) return stale();
   connect();
 
-  setTimeout(() => {
-    runProbe().catch(() => {});
-  }, PROBE_AT);
-  if (probeMode) setTimeout(closeSelf, PROBE_CLOSE_MS);
+  // The Phase 0 probe (resizes, permissions, autoplay, user agent) runs only when asked for
+  // with ?probe=1; an ordinary window measures nothing and sends nothing about the machine.
+  if (probeMode) {
+    setTimeout(() => {
+      runProbe().catch(() => {});
+    }, PROBE_AT);
+    setTimeout(closeSelf, PROBE_CLOSE_MS);
+  }
 
   const bye = () => {
     if (state.told || state.gone) return;

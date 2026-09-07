@@ -46,7 +46,8 @@ function classify(input) {
 /** The last line with anything on it decides. A trailing "?" means Claude asked you something. */
 function endsWithQuestion(message) {
   if (typeof message !== 'string') return false;
-  const lines = message.split('\n').map((line) => line.trim()).filter(Boolean);
+  // Only the tail matters, and a long message need not be split whole.
+  const lines = message.slice(-4000).split('\n').map((line) => line.trim()).filter(Boolean);
   const last = lines.length > 0 ? lines[lines.length - 1] : '';
   return /\?$/.test(last);
 }
@@ -73,10 +74,16 @@ function build(input, token, now) {
 module.exports = { classify, endsWithQuestion, sessionHash, build };
 
 if (require.main === module) {
+  // A hook must never hang a session: past a few seconds, or a few megabytes, say nothing.
+  const MAX_INPUT = 4 * 1024 * 1024;
+  setTimeout(() => process.exit(0), 5000).unref();
   let raw = '';
   process.stdin.setEncoding('utf8');
   process.stdin.on('error', () => process.exit(0));
-  process.stdin.on('data', (chunk) => { raw += chunk; });
+  process.stdin.on('data', (chunk) => {
+    raw += chunk;
+    if (raw.length > MAX_INPUT) process.exit(0);
+  });
   process.stdin.on('end', () => {
     let input = null;
     try {

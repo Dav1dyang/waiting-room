@@ -36,9 +36,17 @@ REPLY="$(printf '%s' "$BODY" | curl -s -m 3 --connect-timeout 1 \
   "$ENDPOINT/api/hook" 2>/dev/null || true)"
 
 # Phase 0 logging, opt in: WAITING_ROOM_LOG=path appends one line per hook, the five fields
-# that were sent and the reply. Nothing from the hook input itself is written.
+# that were sent and what the reply was (open, quit, empty). Nothing from the hook input itself
+# is written, and no room URL: a ticket is a key, not a log line.
 if [ -n "${WAITING_ROOM_LOG:-}" ]; then
-  printf '%s %s %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$BODY" "${REPLY:-(no reply)}" >> "$WAITING_ROOM_LOG" 2>/dev/null || true
+  case "${REPLY:-}" in
+    '') KIND='(no reply)' ;;
+    *'"open"'*) KIND='open' ;;
+    *'"quit":true'*) KIND='quit' ;;
+    '{}') KIND='-' ;;
+    *) KIND='other' ;;
+  esac
+  printf '%s %s %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$BODY" "$KIND" >> "$WAITING_ROOM_LOG" 2>/dev/null || true
 fi
 [ -n "$REPLY" ] || exit 0
 
@@ -63,11 +71,8 @@ process.stdin.on("end", () => {
   } catch (e) {}
 });' 2>/dev/null || true)"
 [ -n "$URL" ] || exit 0
-# A room lives on the web. Anything else is a broken lobby, and we do not hand it to open.
-case "$URL" in
-  http://*|https://*) ;;
-  *) exit 0 ;;
-esac
+# A room lives on our lobby at /room. Anything else is a broken lobby, and we do not open it.
+wr_url_ok "$URL" /room || exit 0
 
 # Seconds since a path was last touched. If we cannot tell, say 0: an age we do not know
 # is not a reason to take someone else's lock away.
