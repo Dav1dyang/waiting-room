@@ -44,7 +44,15 @@ export class LobbyObject extends DurableObject {
     this.regFails = new Map();
     this.regFailsAll = { n: 0, until: 0 };
     this.regOk = new Map();
+    this.capsDirty = false;
     ctx.blockConcurrencyWhile(async () => {
+      // The caps outlive an eviction: they are written with the state whenever they change.
+      const caps = await ctx.storage.get('caps');
+      if (caps) {
+        this.regFails = new Map(caps.fails || []);
+        this.regOk = new Map(caps.ok || []);
+        this.regFailsAll = caps.all || { n: 0, until: 0 };
+      }
       this.salt = await ctx.storage.get('salt');
       if (!this.salt) {
         this.salt = crypto.randomUUID();
@@ -85,8 +93,12 @@ export class LobbyObject extends DurableObject {
     // A hook from a token nobody registered changes nothing and never touches the limiter.
     if (kind === 'hook' && (!this.lobby.tok(token) || !this.allowHook(token, now))) return json({});
     // A token the lobby already knows is a person turning it on again, not a new registration.
+    // The slot is taken before the first await, so two requests in flight cannot both pass the cap.
     const known = kind === 'register' && !!this.lobby.tok(token);
-    if (kind === 'register' && !known && !this.allowRegister(ip, now)) return json({ ok: false, error: 'busy' }, 429);
+    if (kind === 'register' && !known) {
+      if (!this.allowRegister(ip, now)) return json({ ok: false, error: 'busy' }, 429);
+      this.noteRegisterOk(ip, now);
+    }
     // Only the fields the core reads are copied across, so a body can never set its own event kind.
     const ev = { kind, token, now, origin };
     if (kind === 'register') ev.invite = typeof body.invite === 'string' ? body.invite : '';
@@ -99,9 +111,12 @@ export class LobbyObject extends DurableObject {
       if (Number.isFinite(body.ts)) ev.ts = body.ts;
     }
     if (kind === 'register') ev.ipHash = await this.hashAddress(ip);
+    // A token from before the home hash existed picks it up from its next hook.
+    if (kind === 'hook' && ip && !this.lobby.tok(token)?.ipHash) ev.ipHash = await this.hashAddress(ip);
     const out = await this.run(ev);
     if (kind === 'register' && out && out.error === 'invite') this.noteRegisterFailure(ip, now);
-    if (kind === 'register' && out && out.ok && !known) this.noteRegisterOk(ip, now);
+    if (kind === 'register' && !known && !(out && out.ok)) this.unnoteRegister(ip, now);
+    if (this.capsDirty) await this.saveCaps();
     if (kind === 'register' && out && out.error === 'busy') return json(out, 429);
     return json(out);
   }
@@ -148,6 +163,22 @@ export class LobbyObject extends DurableObject {
     if (this.regOk.size > 1000) {
       for (const [k, v] of this.regOk) if (v.until <= now) this.regOk.delete(k);
     }
+    this.capsDirty = true;
+  }
+
+  /** A reserved slot given back when the registration did not happen. */
+  unnoteRegister(ip, now) {
+    const ok = this.regOk.get(ip);
+    if (ok && ok.until > now && ok.n > 0) ok.n -= 1;
+    this.capsDirty = true;
+  }
+
+  async saveCaps() {
+    const now = Date.now();
+    for (const [k, v] of this.regFails) if (v.until <= now) this.regFails.delete(k);
+    for (const [k, v] of this.regOk) if (v.until <= now) this.regOk.delete(k);
+    await this.ctx.storage.put('caps', { fails: [...this.regFails], ok: [...this.regOk], all: this.regFailsAll });
+    this.capsDirty = false;
   }
 
   noteRegisterFailure(ip, now) {
@@ -162,6 +193,7 @@ export class LobbyObject extends DurableObject {
     }
     if (this.regFailsAll.until <= now) this.regFailsAll = { n: 0, until: now + REG_FAILS_ALL_MS };
     this.regFailsAll.n += 1;
+    this.capsDirty = true;
   }
 
   /** A token bucket per socket. Past it the socket is closed with 1008 and the core told. */

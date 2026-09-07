@@ -703,3 +703,27 @@ test('three reports from one address count as one; three homes block', () => {
   }
   assert.ok(l.tok('victimaaa1').blockedUntil > 0, 'three homes block');
 });
+
+test('probes are two per token and forty in all, oldest out; a stray false is not speech', () => {
+  const l = mk();
+  for (let i = 0; i < 25; i++) reg(l, 'probetok' + String(i).padStart(2, '0'), 0);
+  for (let i = 0; i < 25; i++) {
+    const tk = 'probetok' + String(i).padStart(2, '0');
+    const now = bringUp(l, tk, i * 100 * S);
+    for (let k = 0; k < 3; k++) wsMsg(l, tk, { type: 'probe', data: { k } }, now + k);
+    hook(l, tk, 'stopped', now + 5 * S);
+  }
+  const mine = l.apply({ kind: 'probes', token: 'probetok24', now: 0 }).find((f) => f.type === 'reply').body.probes;
+  assert.equal(mine.length, 2, 'two per token');
+  assert.deepEqual(mine.map((p) => p.data.k), [1, 2], 'the oldest of the three went');
+  assert.equal(l.s.probes.length, 40, 'forty in all');
+  assert.equal(l.apply({ kind: 'probes', token: 'probetok00', now: 0 }).find((f) => f.type === 'reply').body.probes.length, 0, 'the earliest token has none left');
+
+  const m = mk();
+  bringUp(m, 'tokenaaaa1', 0);
+  const now = bringUp(m, 'tokenbbbb2', 1 * S);
+  wsMsg(m, 'tokenaaaa1', { type: 'speech', active: true }, now + 10 * S);
+  wsMsg(m, 'tokenbbbb2', { type: 'speech', active: false }, now + 40 * S); // B never spoke: noise
+  const fx = tick(m, now + 56 * S);
+  assert.deepEqual(kinds(fx, 'tokenaaaa1').slice(0, 1), ['line:quiet_room'], 'a stray false from the other side did not stretch the room');
+});
