@@ -54,7 +54,7 @@
       "y": 1300,
       "w": 420,
       "h": 337,
-      "title": "7 \u00b7 Your Claude is done: closing in 5"
+      "title": "7 \u00b7 Your Claude is done: closing in 10"
     },
     {
       "file": "StrangerLeft.dc.html",
@@ -83,25 +83,25 @@
   ],
   "annotations": [
     {
-      "id": "note-surfaces",
+      "id": "review-closing",
       "x": 0,
-      "y": -170,
-      "w": 760,
-      "text": "Three surfaces only (D-46). 1: the terminal, where you turn it on and read the rules. 2: a setup page you visit once: mic, notifications, the door sound, a rehearsal window, your desktop tint. After that the only thing you ever see is the room window."
+      "y": 1140,
+      "w": 320,
+      "text": "Review, v2.5: the goodbye.\n- Ten seconds now, was five: David missed a five-second count mid-sentence.\n- The digit is the desk tint's complement (Pool: #ECAFB0) with a 1 px ink outline, so a pastel still reads on paper. Check it at 64 px; if it fades, the deeper #DE797F without the outline is the fallback.\n- A short tick each second, a shade higher on 3, 2, 1. The knuckle knock is gone.\n- The line: \"Your Claude is done. Closing in 10.\""
     },
     {
-      "id": "note-lead",
-      "x": 0,
-      "y": 500,
-      "w": 940,
-      "text": "v2.3, final tokens from research 09 and 10. Flat pastel desktop (Pool #91CECF by default), black at 1 px, cream panel #F5EEDF with a 6 px inner frame, two pastel button fills (Cyan for Show video, the one inviting action, Blush for Hang up), one yellow highlight, one red live dot. Eight 1-bit icons on an 11 by 11 grid: door (close), shade, person, watch, camera, speaker. Ledge buttons, text only. Two 28-bar meters. ChiKareGo2 16 px with -1 px tracking; Geneva 12 px lines. The window opens shaded when you are queued, knocks on a match, connects on its own (D-79), and closes when your Claude is done."
+      "id": "review-main",
+      "x": 500,
+      "y": 560,
+      "w": 320,
+      "text": "Review, v2.5: the room.\n- Control row: Mute (mic icon) replaces Sounds. David read the speaker as a mute, and a call needs a real one. The door sound keeps its switch on the setup page.\n- Count line at 12 px Geneva, smoothed. In a room it drops \"Your Claude is still working\".\n- The desk shows 8 px at the sides, 6 above, 10 below, clear of the Mac window's rounded corners."
     },
     {
-      "id": "note-lines",
-      "x": 0,
-      "y": 1160,
-      "w": 900,
-      "text": "The lines are the whole interface (D-42, D-43). *** lines are the room talking. YOU: and STRANGER: are away messages the plugin posts for you; nobody types. The count always means other people (D-70). The red dot means the mic is live; the hollow dot means it is not."
+      "id": "review-tints",
+      "x": 484,
+      "y": 1900,
+      "w": 320,
+      "text": "Review, v2.5: accents.\nEach tint carries its complement in OKLCH (hue turned half way round, same lightness and chroma): Pool to peach #ECAFB0, Shell to aqua #88D0D1, Mint to orchid #DBB1D9, Dusk to butter #EFE088 (lifted; a yellow at that lightness is mud).\nUsed for one thing only: the countdown digit. The highlight stays yellow, the live dot stays red."
     }
   ],
   "launch": {

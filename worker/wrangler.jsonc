@@ -31,7 +31,7 @@
     "G": 90000,              // grace after a turn that ended with a question
     "P": 600000,             // patience while Claude waits on you
     "Q": 45000,              // quiet room, no speech from either side for this long
-    "COUNTDOWN": 5,          // seconds of goodbye, not milliseconds
+    "COUNTDOWN": 10,          // seconds of goodbye, not milliseconds
     "ROOM_MAX": 1800000,     // longest room
     "PEER_COOLDOWN": 60000,  // do not re-pair the same two people inside this window
     "OPEN_RETRY": 30000,     // one more "open" if the first window never connected

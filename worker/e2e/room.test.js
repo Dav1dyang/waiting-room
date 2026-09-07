@@ -260,12 +260,12 @@ test('a stopped Claude runs the goodbye on both sides', async () => {
 
   const wa = await until(pa, (s) => hasLine(s, LINES.done_you), 'A is told its own Claude is done');
   assert.equal(wa.state, 'closing');
-  assert.ok(wa.big && /^[1-5]$/.test(wa.big), 'the countdown digit shows, got ' + wa.big);
+  assert.ok(wa.big && /^([1-9]|10)$/.test(wa.big), 'the countdown digit shows, got ' + wa.big);
 
   const wb = await until(pb, (s) => hasLine(s, LINES.done_them), "B is told the stranger's Claude is done");
-  assert.ok(wb.big && /^[1-5]$/.test(wb.big), 'B shows the same digit, got ' + wb.big);
+  assert.ok(wb.big && /^([1-9]|10)$/.test(wb.big), 'B shows the same digit, got ' + wb.big);
 
-  const left = await until(pb, (s) => hasLine(s, LINES.left), 'B is told the stranger left', 12000);
+  const left = await until(pb, (s) => hasLine(s, LINES.left), 'B is told the stranger left', 18000);
   assert.equal(left.state, 'shaded', 'B goes back to the queue');
   await until(pb, (s) => s && s.collapsed, 'B rolls back up after the linger', 8000);
 
@@ -364,6 +364,47 @@ test('a rehearsal window says it is a test and closes itself', async () => {
   assert.equal(w.lines.filter((t) => t === LINES.rehearsal).length, 1, 'the line is not shown twice');
   assert.equal(w.state, 'shaded');
   assert.deepEqual(page.errors, []);
+});
+
+test('Mute silences the mic for the stranger and comes back; a new stranger starts unmuted', async () => {
+  const a = await armed('m');
+  const b = await armed('n');
+  const pa = await openWindow(a.url);
+  const pb = await openWindow(b.url);
+  await until(pa, (s) => hasLine(s, LINES.entered), 'A is in the room');
+  await until(pb, (s) => hasLine(s, LINES.entered), 'B is in the room');
+  await until(pa, (s) => s.micLive === true, 'A\'s mic is live', 8000);
+  const heard = async () => (await pb.evaluate(() => window.__wr.statsLevels())).them;
+  await until(pb, () => true, 'settle', 1);
+  await wait(2500);
+  const before = await heard();
+  assert.ok(before > 0.001, 'B hears A\'s fake mic before the mute, level ' + before);
+
+  await pa.click('#mute');
+  const muted = await until(pa, (s) => s.micLive === false, 'the live dot goes out', 4000);
+  assert.equal(muted.micLive, false);
+  assert.equal(await pa.$eval('#muteLabel', (n) => n.textContent), 'Unmute');
+  await wait(3000);
+  const during = await heard();
+  assert.ok(during < before / 4, `B hears silence while A is muted (${during} vs ${before})`);
+
+  await pa.click('#mute');
+  await until(pa, (s) => s.micLive === true, 'the mic comes back', 4000);
+  assert.equal(await pa.$eval('#muteLabel', (n) => n.textContent), 'Mute');
+
+  // Mute is per room: A mutes again, the stranger leaves, and the next stranger in the same
+  // window starts with the mic open.
+  await pa.click('#mute');
+  await until(pa, (s) => s.micLive === false, 'muted again', 4000);
+  await pb.click('#hangup');
+  await until(pa, (s) => hasLine(s, LINES.left) && s.state === 'shaded', 'A is told B left and shades');
+  const c = await armed('o');
+  const pc = await openWindow(c.url);
+  await until(pc, (s) => hasLine(s, LINES.entered), 'C is in the room with A');
+  const again = await until(pa, (s) => s.state === 'room' && s.micLive === true, 'A meets C with the mic open', 10000);
+  assert.equal(again.micLive, true);
+  assert.equal(await pa.$eval('#muteLabel', (n) => n.textContent), 'Mute', 'the button reads Mute again');
+  assert.deepEqual(pa.errors, []);
 });
 
 test('a probe window sends one Phase 0 probe; an ordinary one sends none', async () => {

@@ -2,6 +2,11 @@
 
 Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 
+## 2026-09-07 (v0.6.2, after the mock conversation)
+
+- A scripted stranger on the live lobby (a token whose window runs in a scripted Chrome with a synthetic voice as its mic) met David's real window twice. Everything held: knock, unroll, voice both ways, video both ways, the goodbye. Found and fixed: a window talking with no pause sent the lobby nothing after its first "speaking" frame, so the room was called quiet at 45 s mid-sentence (the flag now repeats every 10 s); a doubled "Back in the queue." line.
+- From David's notes during the run (D-96, D-97): the countdown is ten seconds with a tick each second and the digit in the desk tint's complement; Mute replaces Sounds; the room count line drops its second sentence. Mockup v2.5.
+
 ## 2026-09-07 (v0.6.1, after the first checklist run)
 
 - Checklist run on David's Mac with the installed plugin: mic and notifications granted in the plugin's Chrome profile, the test window and a real window opened through real hooks, the hook log is on for the week. Two findings.

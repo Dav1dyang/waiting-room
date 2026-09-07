@@ -25,7 +25,7 @@ All in the lobby's config (`worker/wrangler.jsonc` `vars`), provisional until Ph
 | `G` | 90 s | Grace after a turn that ends with a question (D-13). |
 | `P` | 10 min | Patience while Claude waits on you (permission, question, tool input) or on a background task. |
 | `Q` | 45 s | Quiet room. No speech from either side for Q seconds ends the room (D-80). |
-| `COUNTDOWN` | 5 | Seconds of goodbye (D-10). |
+| `COUNTDOWN` | 10 | Seconds of goodbye (D-10, D-96: was 5). |
 | `ROOM_MAX` | 30 min | Longest room. |
 | `PEER_COOLDOWN` | 60 s | Do not re-pair the same two people within this window. |
 | `OPEN_RETRY` | 30 s | If no window ever connected after "open", one more "open" is allowed. |
@@ -132,8 +132,8 @@ Window to server:
 | `hear` | soft | They can hear you. Say hi. |
 | `brb` | you / them | brb, my Claude needs me |
 | `back` | you / them | back |
-| `done_you` | sys | Your Claude is done. Closing in 5. |
-| `done_them` | sys | Stranger's Claude is done. Leaving in 5. |
+| `done_you` | sys | Your Claude is done. Closing in 10. |
+| `done_them` | sys | Stranger's Claude is done. Leaving in 10. |
 | `left` | sys | Stranger has left the room. |
 | `requeued` | soft | Back in the queue. |
 | `video_on` | sys | Video is on. |
@@ -141,7 +141,7 @@ Window to server:
 | `quiet_room` | sys | Quiet room. Back in the queue. |
 | `time_up` | sys | Thirty minutes. Back in the queue. |
 | `reported` | sys | Reported. Leaving. |
-| `rehearsal` | sys | This is a test. Closing in 5. |
+| `rehearsal` | sys | This is a test. Closing in 10. |
 | `done_alone` | sys | Your Claude is done. |
 
 ## 8. One wait, as a trace

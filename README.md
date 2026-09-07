@@ -1,6 +1,6 @@
 # waiting-room
 
-A Claude Code plugin. While your Claude works for more than 15 seconds, a small window opens behind your terminal and puts you on an audio call with a stranger whose Claude is also working. It closes itself with a five-second countdown when either Claude finishes. Every wait, a different stranger. The stranger never learns anything about your task.
+A Claude Code plugin. While your Claude works for more than 15 seconds, a small window opens behind your terminal and puts you on an audio call with a stranger whose Claude is also working. It closes itself with a ten-second countdown when either Claude finishes. Every wait, a different stranger. The stranger never learns anything about your task.
 
 Status, 2026-09-06: the alpha is built, tested, and the lobby is live on workers.dev. Invite only.
 
@@ -34,7 +34,7 @@ One small POST per hook: your token, one of five words (`started`, `tick`, `need
 | `docs/index.html` | The plan, v0.6. Older plans in `docs/archive/`. |
 | `docs/DECISIONS.md`, `docs/CHANGELOG.md`, `docs/QUESTIONS.md` | Decision log D-01 to D-92, change log, the questions and their answers. |
 | `docs/research/` | Ten research memos: lineage, plugin mechanics, hosting and WebRTC, product history and safety, Omegle UI, ecosystem and naming, retro chat windows, auto-open windows, Poolsuite colour, video dither and window shade. |
-| `design/` | Mockup v2.4: the generator, ten artboards, the canvas, the font (ChiKareGo2, CC BY). |
+| `design/` | Mockup v2.5: the generator, ten artboards, the canvas, the font (ChiKareGo2, CC BY). |
 
 ## Tests
 

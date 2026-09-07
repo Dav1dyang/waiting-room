@@ -18,6 +18,7 @@
   --cyan: #B7E7E8;
   --blush: #FBD0D0;
   --desk: #91CECF;
+  --accent: #ECAFB0;
   --chi: 'ChiKareGo2', 'Chicago', Geneva, Verdana, sans-serif;
   --gen: Geneva, Verdana, 'Lucida Grande', sans-serif;
   --tb: 20px;
@@ -167,6 +168,9 @@ body {
 .log .big {
   position: absolute; right: 34px; bottom: 0;
   font: 64px/64px var(--chi); letter-spacing: -2px;
+  /* the desk tint's complement, with a one-pixel ink outline so a pastel still reads on paper */
+  color: var(--accent);
+  text-shadow: 1px 0 0 var(--ink), -1px 0 0 var(--ink), 0 1px 0 var(--ink), 0 -1px 0 var(--ink);
 }
 
 /* the fake scroll bar: decoration, the log never scrolls (five lines, oldest drops) */
@@ -251,7 +255,7 @@ body {
 .btn.def:not(.dis):active {
   box-shadow: inset 0 1px 0 0 var(--paper), 0 0 0 2px var(--paper), 0 0 0 5px var(--ink);
 }
-.snd {
+.mute {
   display: inline-flex; align-items: center; gap: 5px;
   font: 11px/12px var(--gen); margin-left: auto; white-space: nowrap;
   background: none; border: 0; padding: 0; color: var(--ink);

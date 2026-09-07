@@ -171,7 +171,7 @@ export function paintThumb(el, count, max = LOG_MAX) {
 export function paintCount(els, { others, inRoom, micLive }) {
   els.lead.setAttribute('data-icon', inRoom ? 'person' : 'watch');
   els.mark.className = micLive ? 'live' : 'dot';
-  els.text.textContent = countLine(others);
+  els.text.textContent = countLine(others, inRoom);
 }
 
 /** Look up a protocol line key. Unknown keys render as the key, which is honest and visible. */

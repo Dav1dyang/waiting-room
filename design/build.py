@@ -21,6 +21,9 @@ INK, PAPER, CREAM = '#000000', '#FFFFFF', '#F5EEDF'
 HILITE = '#FFF1A8'                      # the one line that matters now
 LIVE = '#D01D21'                        # the mic is live; the only other colour with meaning
 TINTS = [('Pool', '#91CECF'), ('Shell', '#E6B1B2'), ('Mint', '#A7CDAB'), ('Dusk', '#BBBCE9')]
+# Each tint's complement in OKLCH, the countdown digit's colour (D-96).
+ACCENTS = {'Pool': '#ECAFB0', 'Shell': '#88D0D1', 'Mint': '#DBB1D9', 'Dusk': '#EFE088'}
+ACCENT = ACCENTS['Pool']
 DESK = TINTS[0][1]
 CYAN, BLUSH = '#B7E7E8', '#FBD0D0'       # the one default action; hang up
 CHI = "'ChiKareGo2', 'Chicago', Geneva, Verdana, sans-serif"
@@ -80,6 +83,28 @@ ICONS = {
 .#.........
 .#.........
 .#.........""",
+ 'mic': """....###....
+....###....
+....###....
+....###....
+....###....
+..#.###.#..
+..#.....#..
+...#####...
+.....#.....
+...#####...
+...........""",
+ 'micOff': """....###...#
+....###..#.
+....###.#..
+....####...
+....###....
+..#.###.#..
+..#.#...#..
+...#####...
+..#..#.....
+.#.#####...
+#..........""",
  'speaker': """...........
 ....#......
 ...##..#...
@@ -173,7 +198,7 @@ body{margin:0;background:@DESK}
 .log .sys.soft{color:#6b6b6b}
 .log .say b{font:16px/16px @CHI;letter-spacing:-1px;font-weight:normal}
 .log .hi{background:@HILITE;margin:0 -6px;padding:0 6px}
-.log .big{position:absolute;right:34px;bottom:0;font:64px/64px @CHI;letter-spacing:-2px}
+.log .big{position:absolute;right:34px;bottom:0;font:64px/64px @CHI;letter-spacing:-2px;color:@ACCENT;text-shadow:1px 0 0 @INK,-1px 0 0 @INK,0 1px 0 @INK,0 -1px 0 @INK}
 .sb{position:absolute;top:0;right:0;bottom:0;width:16px;border-left:1px solid @INK;@DITHER}
 .sb .up,.sb .dn{position:absolute;left:0;width:15px;height:15px;background:@PAPER}
 .sb .up{top:0;border-bottom:1px solid @INK}
@@ -210,7 +235,7 @@ body{margin:0;background:@DESK}
 '''
 for k, v in [('@B64', FONT_B64), ('@DESK', DESK), ('@PAPER', PAPER), ('@INK', INK), ('@CREAM', CREAM),
              ('@HILITE', HILITE), ('@LIVE', LIVE), ('@CYAN', CYAN), ('@BLUSH', BLUSH), ('@GEN', GEN), ('@CHI', CHI),
-             ('@DITHER', DITHER), ('@TBpx', f'{TB}px'), ('@TOPICpx', f'{TOPIC}px'), ('@PADpx', f'{PAD}px'),
+             ('@ACCENT', ACCENT), ('@DITHER', DITHER), ('@TBpx', f'{TB}px'), ('@TOPICpx', f'{TOPIC}px'), ('@PADpx', f'{PAD}px'),
              ('@LOGHpx', f'{LOGH}px'), ('@STATUSpx', f'{STATUS}px'), ('@CTLpx', f'{CTL}px'), ('@FEEDHpx', f'{FEEDH}px')]:
     CSS = CSS.replace(k, v)
 
@@ -290,8 +315,8 @@ def status(you, them, you_peak=None, them_peak=None):
             f'<span>STRANGER {meter(them, them_peak)}</span></div>\n')
 
 
-def controls(kind, sounds=True):
-    snd = f'<span class="snd">{icon("speaker" if sounds else "muted")}Sounds</span>'
+def controls(kind, muted=False):
+    snd = f'<span class="snd">{icon("micOff" if muted else "mic")}{"Unmute" if muted else "Mute"}</span>'
     if kind == 'room':
         b = '<span class="btn blush">Hang up</span><span class="btn cyan">Show video</span><span class="btn">Report</span>'
     elif kind == 'video':
@@ -351,11 +376,11 @@ room('StrangerAway', others=2, state='live',
      note='What the stranger sees while your Claude needs you. Nothing about the task, only that you stepped away.')
 room('Closing', others=1, state='live',
      lines=[('sys', 'Stranger has entered the room.'), ('you-hi', 'brb, my Claude needs me'), ('you', 'back'),
-            ('sys', 'Your Claude is done. Closing in 5.')],
-     ctl='closing', lv=(0, 3), big='5',
-     note='The only task-related thing a stranger ever sees is this countdown. Knock on 3, 2, 1. Then the window closes itself.')
+            ('sys', 'Your Claude is done. Closing in 10.')],
+     ctl='closing', lv=(0, 3), big='10',
+     note='The only task-related thing a stranger ever sees is this countdown. Ten seconds, a tick each second, the digit in the desk tint\'s complement. Then the window closes itself.')
 room('StrangerLeft', others=1, state='knock',
-     lines=[('sys', "Stranger's Claude is done. Leaving in 5."), ('sys', 'Stranger has left the room.'),
+     lines=[('sys', "Stranger's Claude is done. Leaving in 10."), ('sys', 'Stranger has left the room.'),
             ('soft', 'Back in the queue. 1 other is waiting.')],
      ctl='left', lv=(0, 0), thumb_top=40,
      note='Their Claude finished first. The mic is released (no red dot). Report stays clickable. After a few seconds the window shades back up to screen 3 and you are queued again.')
@@ -372,7 +397,8 @@ def tints():
     for name, hex_ in TINTS:
         rows += (f'<div style="position:absolute;left:0;top:{y}px;width:460px;height:96px;background:{hex_};">'
                  f'<div class="win" style="left:20px;top:26px;width:{W}px;height:{TB + TOPIC + 2}px;">{titlebar("Waiting Room")}{count_line(2, "queued")}</div>'
-                 f'<div style="position:absolute;right:12px;top:8px;font:10px/12px {GEN};color:{INK};">{name} {hex_}{" (default)" if name == "Pool" else ""}</div></div>')
+                 f'<div style="position:absolute;right:12px;top:8px;font:10px/12px {GEN};color:{INK};">{name} {hex_}{" (default)" if name == "Pool" else ""} &middot; digit {ACCENTS[name]}</div>'
+                 f'<div style="position:absolute;right:16px;top:22px;font:36px/36px {CHI};letter-spacing:-1px;color:{ACCENTS[name]};text-shadow:1px 0 0 {INK},-1px 0 0 {INK},0 1px 0 {INK},0 -1px 0 {INK};">10</div></div>')
         y += 96
     write('Tints', rows, 460, y, TINTS[0][1])
 
@@ -471,7 +497,7 @@ titles = {
     'Main': '4 · A stranger arrived: talking',
     'NeedsYou': '5 · Your Claude needs you',
     'StrangerAway': "6 · Stranger's Claude needs them",
-    'Closing': '7 · Your Claude is done: closing in 5',
+    'Closing': '7 · Your Claude is done: closing in 10',
     'StrangerLeft': '8 · Stranger left: shades back up',
     'Video': '9 · Video on, dot screen',
     'Tints': '10 · The four desktop tints: Pool is the default (D-78)',
@@ -492,5 +518,28 @@ canvas = {
     ],
     "launch": {"view": "canvas"}
 }
+def note(id_, file, text, dx=0, dy=-160, w=320):
+    a = next(a for a in canvas['artboards'] if a['file'] == file + '.dc.html')
+    return {"id": id_, "x": a['x'] + dx, "y": a['y'] + dy, "w": w, "text": text}
+
+
+canvas['annotations'] = [
+    note('review-closing', 'Closing',
+         "Review, v2.5: the goodbye.\n"
+         "- Ten seconds now, was five: David missed a five-second count mid-sentence.\n"
+         "- The digit is the desk tint's complement (Pool: #ECAFB0) with a 1 px ink outline, so a pastel still reads on paper. Check it at 64 px; if it fades, the deeper #DE797F without the outline is the fallback.\n"
+         "- A short tick each second, a shade higher on 3, 2, 1. The knuckle knock is gone.\n"
+         "- The line: \"Your Claude is done. Closing in 10.\""),
+    note('review-main', 'Main',
+         "Review, v2.5: the room.\n"
+         "- Control row: Mute (mic icon) replaces Sounds. David read the speaker as a mute, and a call needs a real one. The door sound keeps its switch on the setup page.\n"
+         "- Count line at 12 px Geneva, smoothed. In a room it drops \"Your Claude is still working\".\n"
+         "- The desk shows 8 px at the sides, 6 above, 10 below, clear of the Mac window's rounded corners."),
+    note('review-tints', 'Tints',
+         "Review, v2.5: accents.\n"
+         "Each tint carries its complement in OKLCH (hue turned half way round, same lightness and chroma): Pool to peach #ECAFB0, Shell to aqua #88D0D1, Mint to orchid #DBB1D9, Dusk to butter #EFE088 (lifted; a yellow at that lightness is mud).\n"
+         "Used for one thing only: the countdown digit. The highlight stays yellow, the live dot stays red.",
+         dx=FRAMES['Tints'][0] + 24, dy=0),
+]
 json.dump(canvas, open('canvas.json', 'w'), indent=2)
 print('built', len(boards), 'artboards; font embedded:', bool(FONT_B64))

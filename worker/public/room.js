@@ -1,7 +1,7 @@
 // The room window. One WebSocket to the lobby, one peer connection to the stranger.
 // Protocol: docs/PROTOCOL.md sections 5, 6, 7. Copy: copy.js. Look: design/build.py.
 
-import { LINES, UI, countLine } from './copy.js';
+import { LINES, UI, countLine, accentFor } from './copy.js';
 import { paintIcons } from './icons.js';
 import {
   LOG_MAX, backoffMs, buildMeter, makePeakHold, makeSpeechGate, litBars,
@@ -22,6 +22,7 @@ const STUCK_MS = 500;     // and how long after that we admit the window would n
 const STALE_MS = 3000;
 const PROBE_AT = 800;
 const PROBE_CLOSE_MS = 6000;
+const REHEARSAL_COUNT = 10; // the test window counts down like a real goodbye (D-96)
 const TICK_MS = 40;
 const STATS_MS = 200;  // the fallback poll, when Web Audio never started
 
@@ -32,7 +33,7 @@ const probeMode = q.get('probe') === '1';
 const el = {};
 for (const id of ['win', 'tb', 'door', 'shadebox', 'zoom', 'topic', 'lead', 'mark', 'countText',
   'stage', 'localVideo', 'remoteVideo', 'log', 'lines', 'big', 'thumb', 'meterYou', 'meterThem',
-  'hangup', 'videoBtn', 'report', 'sounds', 'soundIcon', 'remoteAudio']) {
+  'hangup', 'videoBtn', 'report', 'mute', 'muteIcon', 'muteLabel', 'remoteAudio']) {
   el[id] = document.getElementById(id);
 }
 
@@ -54,6 +55,7 @@ const state = {
   localVideoOn: false,
   peerVideoOn: false,
   micLive: false,
+  muted: false,
   pcState: 'new',
   lingerTimer: 0,
 };
@@ -84,6 +86,7 @@ function tint() {
   const t = store('wr-tint') || TINT_DEFAULT;
   document.body.style.background = t;
   document.documentElement.style.setProperty('--desk', t);
+  document.documentElement.style.setProperty('--accent', accentFor(t));
 }
 
 function stageVisible() {
@@ -114,6 +117,16 @@ function applySize() {
   } catch {
     // some hosts refuse; the page lays out to whatever it got (D-74)
   }
+}
+
+/** Mute is per room: a new stranger always starts with the mic open (D-97). */
+function setMuted(on) {
+  state.muted = !!on;
+  if (peer) peer.setMuted(state.muted);
+  el.muteIcon.setAttribute('data-icon', state.muted ? 'micOff' : 'mic');
+  el.muteLabel.textContent = state.muted ? UI.unmute : UI.mute;
+  paintIcons(el.mute);
+  render();
 }
 
 function render() {
@@ -302,7 +315,18 @@ function showRehearsal() {
     append('rehearsal', 'sys');
   }
   sound.doorIn();
-  setTimeout(closeSelf, 5000);
+  // The same goodbye a real room gets: the digit in the accent, a tick a second, then close.
+  let n = REHEARSAL_COUNT;
+  const step = () => {
+    if (state.gone) return;
+    if (n <= 0) return closeSelf();
+    el.big.hidden = false;
+    el.big.textContent = String(n);
+    sound.tick(n);
+    n -= 1;
+    setTimeout(step, 1000);
+  };
+  setTimeout(step, 600);
 }
 
 function setWin(next) {
@@ -364,6 +388,8 @@ function startRoom(msg) {
       state.pcState = s;
     },
   });
+  // Mute is per room: every new stranger starts with the mic open (D-97).
+  if (state.muted) setMuted(false);
 
   // The knock, then the door. If the sound is blocked the notification is the knock.
   const knocked = sound.notify(UI.title, LINES.entered, { silent: false });
@@ -388,7 +414,7 @@ function onCountdown(msg) {
   }
   el.big.hidden = false;
   el.big.textContent = String(msg.n);
-  if (msg.n === 3 || msg.n === 2 || msg.n === 1) sound.knock();
+  sound.tick(msg.n); // one click a second, a shade higher on the last three (D-96)
 }
 
 function onClose(reason) {
@@ -527,10 +553,9 @@ function wireButtons() {
       // camera refused; the button stays as it was
     }
   }
-  el.sounds.onclick = () => {
-    const on = sound.setSounds(!sound.soundsEnabled());
-    el.soundIcon.setAttribute('data-icon', on ? 'speaker' : 'muted');
-    paintIcons(el.sounds);
+  el.mute.onclick = () => {
+    if (!peer) return;
+    setMuted(!state.muted);
   };
 
   // The title bar widgets. The door closes by hand, which means "not this turn" (D-68).
@@ -677,8 +702,7 @@ function start() {
   tint();
   buildMeter(el.meterYou);
   buildMeter(el.meterThem);
-  const on = sound.loadSoundPref();
-  el.soundIcon.setAttribute('data-icon', on ? 'speaker' : 'muted');
+  sound.loadSoundPref();
   paintIcons(document);
   el.countText.textContent = countLine(0);
   wireButtons();
