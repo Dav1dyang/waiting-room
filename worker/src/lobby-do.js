@@ -26,6 +26,10 @@ const REG_FAILS_IP = 10;
 const REG_FAILS_IP_MS = 600_000;
 const REG_FAILS_ALL = 300;
 const REG_FAILS_ALL_MS = 3_600_000;
+// With an open lobby (no invite code) this is the door: thirty new registrations from one
+// address in an hour, then 429. A home has one address; a person turns it on once.
+const REG_PER_IP = 30;
+const REG_PER_IP_MS = 3_600_000;
 const TICK_MS = 1000;
 // Frames bigger than this are nonsense; an SDP offer with video is a few kilobytes.
 const MAX_FRAME = 65536;
@@ -39,7 +43,21 @@ export class LobbyObject extends DurableObject {
     this.frames = new WeakMap();
     this.regFails = new Map();
     this.regFailsAll = { n: 0, until: 0 };
+    this.regOk = new Map();
+    this.capsDirty = false;
     ctx.blockConcurrencyWhile(async () => {
+      // The caps outlive an eviction: they are written with the state whenever they change.
+      const caps = await ctx.storage.get('caps');
+      if (caps) {
+        this.regFails = new Map(caps.fails || []);
+        this.regOk = new Map(caps.ok || []);
+        this.regFailsAll = caps.all || { n: 0, until: 0 };
+      }
+      this.salt = await ctx.storage.get('salt');
+      if (!this.salt) {
+        this.salt = crypto.randomUUID();
+        await ctx.storage.put('salt', this.salt);
+      }
       const saved = await ctx.storage.get('state');
       this.lobby = new Lobby(cfgFrom(env), saved || null);
       // Ping and pong never wake this object up.
@@ -53,7 +71,7 @@ export class LobbyObject extends DurableObject {
     const url = new URL(request.url);
     const now = Date.now();
     const origin = request.headers.get('x-wr-origin') || url.origin;
-    const ip = request.headers.get('x-wr-ip') || '';
+    const ip = ipKey(request.headers.get('x-wr-ip') || '');
 
     if (url.pathname === '/ws') return this.openSocket(url, now);
 
@@ -74,7 +92,13 @@ export class LobbyObject extends DurableObject {
     const token = typeof body.token === 'string' ? body.token : '';
     // A hook from a token nobody registered changes nothing and never touches the limiter.
     if (kind === 'hook' && (!this.lobby.tok(token) || !this.allowHook(token, now))) return json({});
-    if (kind === 'register' && !this.allowRegister(ip, now)) return json({ ok: false, error: 'busy' }, 429);
+    // A token the lobby already knows is a person turning it on again, not a new registration.
+    // The slot is taken before the first await, so two requests in flight cannot both pass the cap.
+    const known = kind === 'register' && !!this.lobby.tok(token);
+    if (kind === 'register' && !known) {
+      if (!this.allowRegister(ip, now)) return json({ ok: false, error: 'busy' }, 429);
+      this.noteRegisterOk(ip, now);
+    }
     // Only the fields the core reads are copied across, so a body can never set its own event kind.
     const ev = { kind, token, now, origin };
     if (kind === 'register') ev.invite = typeof body.invite === 'string' ? body.invite : '';
@@ -86,8 +110,14 @@ export class LobbyObject extends DurableObject {
       ev.session = typeof body.session === 'string' ? body.session.slice(0, 32) : '';
       if (Number.isFinite(body.ts)) ev.ts = body.ts;
     }
+    if (kind === 'register') ev.ipHash = await this.hashAddress(ip);
+    // A token from before the home hash existed picks it up from its next hook.
+    if (kind === 'hook' && ip && !this.lobby.tok(token)?.ipHash) ev.ipHash = await this.hashAddress(ip);
     const out = await this.run(ev);
     if (kind === 'register' && out && out.error === 'invite') this.noteRegisterFailure(ip, now);
+    if (kind === 'register' && !known && !(out && out.ok)) this.unnoteRegister(ip, now);
+    if (this.capsDirty) await this.saveCaps();
+    if (kind === 'register' && out && out.error === 'busy') return json(out, 429);
     return json(out);
   }
 
@@ -110,7 +140,45 @@ export class LobbyObject extends DurableObject {
     const byIp = this.regFails.get(ip);
     if (byIp && byIp.until > now && byIp.n >= REG_FAILS_IP) return false;
     if (this.regFailsAll.until > now && this.regFailsAll.n >= REG_FAILS_ALL) return false;
+    const ok = this.regOk.get(ip);
+    if (ok && ok.until > now && ok.n >= REG_PER_IP) return false;
     return true;
+  }
+
+  /** A salted hash of the address, kept on the token so three reports from one home count once. */
+  async hashAddress(ip) {
+    if (!ip) return null;
+    const bytes = new TextEncoder().encode(this.salt + '|' + ip);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  noteRegisterOk(ip, now) {
+    let ok = this.regOk.get(ip);
+    if (!ok || ok.until <= now) {
+      ok = { n: 0, until: now + REG_PER_IP_MS };
+      this.regOk.set(ip, ok);
+    }
+    ok.n += 1;
+    if (this.regOk.size > 1000) {
+      for (const [k, v] of this.regOk) if (v.until <= now) this.regOk.delete(k);
+    }
+    this.capsDirty = true;
+  }
+
+  /** A reserved slot given back when the registration did not happen. */
+  unnoteRegister(ip, now) {
+    const ok = this.regOk.get(ip);
+    if (ok && ok.until > now && ok.n > 0) ok.n -= 1;
+    this.capsDirty = true;
+  }
+
+  async saveCaps() {
+    const now = Date.now();
+    for (const [k, v] of this.regFails) if (v.until <= now) this.regFails.delete(k);
+    for (const [k, v] of this.regOk) if (v.until <= now) this.regOk.delete(k);
+    await this.ctx.storage.put('caps', { fails: [...this.regFails], ok: [...this.regOk], all: this.regFailsAll });
+    this.capsDirty = false;
   }
 
   noteRegisterFailure(ip, now) {
@@ -125,6 +193,7 @@ export class LobbyObject extends DurableObject {
     }
     if (this.regFailsAll.until <= now) this.regFailsAll = { n: 0, until: now + REG_FAILS_ALL_MS };
     this.regFailsAll.n += 1;
+    this.capsDirty = true;
   }
 
   /** A token bucket per socket. Past it the socket is closed with 1008 and the core told. */
@@ -307,6 +376,19 @@ function whoIs(ctx, ws) {
     att = null;
   }
   return att && typeof att.token === 'string' && att.token && att.conn ? att : null;
+}
+
+/**
+ * The address as the caps see it. An IPv6 host has a whole /64 to itself, so the key is the
+ * first four groups; an IPv4 address is itself.
+ */
+function ipKey(ip) {
+  if (!ip || !ip.includes(':')) return ip;
+  const [head, tail = ''] = ip.split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail ? tail.split(':') : [];
+  const groups = [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right];
+  return groups.slice(0, 4).map((g) => g.toLowerCase().replace(/^0+(?=.)/, '') || '0').join(':') + '::/64';
 }
 
 function dropSocket(ws) {

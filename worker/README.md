@@ -12,7 +12,7 @@ optional relay credentials.
 Every number lives in `wrangler.jsonc` under `vars`, in milliseconds, and matches
 docs/PROTOCOL.md section 2. Nothing there is private. Secrets never go in that file:
 
-    npx wrangler secret put INVITES         # DUCK,HERON. Empty means anyone may register.
+    npx wrangler secret put INVITES         # DUCK,HERON. Unset or empty means anyone may register (the public lobby is open).
     npx wrangler secret put TURN_KEY_ID     # optional, Cloudflare Realtime TURN
     npx wrangler secret put TURN_API_TOKEN  # optional, both or neither
 

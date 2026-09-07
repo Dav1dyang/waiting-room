@@ -2,6 +2,13 @@
 
 Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 
+## 2026-09-07 (v0.6.3, public)
+
+- The repo is public under MIT (the ChiKareGo2 font keeps its CC BY 4.0). Commit authors rewritten to the GitHub no-reply address first. README rewritten in David's voice after a Codex copy review, with a screenshot of the room.
+- The lobby is open: the invite secret is deleted, `/waiting-room:on` needs no code (D-98). Registrations are capped at thirty per address per hour, tested under wrangler dev with per-section client addresses.
+- Codex on the open door (D-100): caps persisted and reserved before any await, probes capped lobby-wide, only true speech frames count, the sweep counts from the latest registration, old tokens pick up the home hash from a hook, local countdown ticks between frames, no cue after close. Not taken: relay-only ICE.
+- Edge walk for the open door (D-99): caps key IPv6 by /64, a ceiling of three thousand tokens with a sweep of register-only ones, reports count per home (a salted address hash on the token), known tokens bypass the cap, the busy line no longer blames codes.
+
 ## 2026-09-07 (v0.6.2, after the mock conversation)
 
 - A scripted stranger on the live lobby (a token whose window runs in a scripted Chrome with a synthetic voice as its mic) met David's real window twice. Everything held: knock, unroll, voice both ways, video both ways, the goodbye. Found and fixed: a window talking with no pause sent the lobby nothing after its first "speaking" frame, so the room was called quiet at 45 s mid-sentence (the flag now repeats every 10 s); a doubled "Back in the queue." line.

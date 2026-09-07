@@ -31,6 +31,7 @@ All in the lobby's config (`worker/wrangler.jsonc` `vars`), provisional until Ph
 | `OPEN_RETRY` | 30 s | If no window ever connected after "open", one more "open" is allowed. |
 | `TICKET_TTL` | 10 min | A room ticket must be used within this time. |
 | `RECONNECT_GRACE` | 15 s | A dropped socket keeps its window and room this long. |
+| `MAX_TOKENS` | 3000 | The lobby is one storage value; past this, tokens that registered and never sent a hook are swept (after `UNHOOKED_TTL`, 1 h), and if it is still full registration says busy. |
 | `SETUP_GRACE` | 10 min | After `register`, the setup page may be open in the plugin's browser: no `quit` hint, `window: true`. |
 | `REHEARSAL_GRACE` | 20 s | After a test window is issued it is still closing itself: same. |
 
@@ -61,7 +62,7 @@ Other HTTP routes:
 
 | Route | Body or query | Reply |
 | --- | --- | --- |
-| `POST /api/register` | `{ token, invite }` | `{ ok, count, setup }` or `{ ok:false, error:"invite" }`; 429 `{ ok:false, error:"busy" }` after ten wrong codes from one address in ten minutes, or three hundred from everyone in an hour |
+| `POST /api/register` | `{ token, invite }` | `{ ok, count, setup }` or `{ ok:false, error:"invite" }`; 429 `{ ok:false, error:"busy" }` after ten wrong codes from one address in ten minutes, three hundred from everyone in an hour, or thirty new registrations from one address in an hour (a token the lobby knows may always turn itself on again); also busy when the lobby is full |
 | `POST /api/off` | `{ token }` | `{ ok }`, closes any window |
 | `GET /api/count?t=TOKEN` | | `{ count, enabled, window }`; count means others, never you; window is true while a window exists or is on its way; a token nobody registered gets `{ count:0, enabled:false, window:false }` |
 | `POST /api/rehearse` | `{ token }` | `{ ok }`, next hook opens a test window (D-84) |
@@ -121,7 +122,7 @@ Window to server:
 | `hangup` | | leave; out for this task |
 | `report` | | flag the peer (one flag per reporter per day) and leave; with no room, flag the last peer of the past minute and stay |
 | `bye` | `reason: "manual"` | sent on pagehide when the window was not told to close |
-| `probe` | `data` | Phase 0 measurements, stored per token; only a window opened with `?probe=1` sends one |
+| `probe` | `data` | Phase 0 measurements; only a window opened with `?probe=1` sends one. The lobby keeps two per token and forty in all, oldest out, so no client can grow the state with them |
 
 ## 7. Line keys
 
@@ -173,4 +174,4 @@ Candidates: task `queued` (not paused), a hook within F, a connected window that
 
 ## 11. Abuse and safety
 
-A socket that sends more than 40 frames a second (burst 120) is closed with 1008; a socket the lobby cannot vouch for (no attachment) is closed with 4001. Every route needs a registered token; registration needs an invite code from `INVITES` (empty means open, alpha uses a code). Report flags the peer; flags from three different people in a day block a token for a day, and a blocked window closes at once. Tokens with no activity for 30 days are forgotten. Rooms never carry text. Nothing is stored beyond the lobby's in-memory state, a small SQLite blob for restarts, and the probe records you asked for.
+A socket that sends more than 40 frames a second (burst 120) is closed with 1008; a socket the lobby cannot vouch for (no attachment) is closed with 4001. Every route needs a registered token; registration needs an invite code only when `INVITES` is set (the public lobby has it unset since 2026-09-07: open, with the per-address caps above). Report flags the peer; flags from three different homes in a day block a token for a day, and a blocked window closes at once. A home is a salted hash of the registering address (an IPv6 address counts by its /64), kept on the token and nowhere else; a token from before this rule picks it up from its next hook; the salt is made once by the lobby and never leaves it. The registration caps are written to storage with the state, so an eviction does not reset them, and a slot is taken before the request does anything else, so two requests in flight cannot both pass. Only a `speech` frame with `active: true` counts as speech for the quiet-room rule; the other side's silence never freshens it. Tokens with no activity for 30 days are forgotten. Rooms never carry text. Nothing is stored beyond the lobby's in-memory state, a small SQLite blob for restarts, and the probe records you asked for.

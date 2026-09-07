@@ -9,6 +9,7 @@ import { rmsLevel, store } from './ui.js';
 let ctx = null;
 let zero = null;
 let enabled = true;
+let epoch = 0; // bumped by hush(): a cue still waiting on the context then stays silent
 let lastPath = 'none'; // 'audio', 'notification', or 'blocked'
 
 const SOUND_KEY = 'wr-sounds';
@@ -110,9 +111,14 @@ export async function play(name, { notifyBody = '', allowNotify = true, cue = {}
     lastPath = 'off';
     return lastPath;
   }
+  const mine = epoch;
   const c = audioContext();
   if (c) {
     const state = await resumeAudio();
+    if (mine !== epoch) {
+      lastPath = 'off';
+      return lastPath;
+    }
     if (state === 'running') {
       try {
         CUES[name](c, c.currentTime + 0.02, cue);
@@ -135,6 +141,11 @@ export const doorIn = (o) => play('doorIn', { notifyBody: LINES.entered, ...o })
 export const doorOut = (o) => play('doorOut', { notifyBody: LINES.left, allowNotify: false, ...o });
 export const knock = (o) => play('knock', { notifyBody: LINES.done_you, allowNotify: false, ...o });
 export const tick = (n) => play('tick', { allowNotify: false, cue: { n } });
+
+/** No more cues from before this moment: the window is closing. */
+export function hush() {
+  epoch += 1;
+}
 
 /** A macOS notification, when permission is already granted. Never asks here. */
 export function notify(title, body, opts = {}) {

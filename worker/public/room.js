@@ -49,6 +49,9 @@ const state = {
   room: null,
   lines: [],
   countdownSeen: false,
+  shownN: 0,
+  countN: 0,
+  countAt: 0,
   greeted: false,     // a hello has arrived, so the state below came from the lobby
   rehearsal: false,
   rehearsalLine: false,
@@ -357,7 +360,9 @@ function setWin(next) {
 function startRoom(msg) {
   state.room = msg.room || null;
   state.countdownSeen = false;
+  stopCount();
   el.big.hidden = true;
+  stopCount();
   if (peer) peer.close();
   resetLevels();
   state.pcState = 'new'; // a new room is a new connection, not the last one's result
@@ -407,18 +412,48 @@ function startRoom(msg) {
   render();
 }
 
+let countTimer = 0;
+
 function onCountdown(msg) {
   if (!state.countdownSeen) {
     state.countdownSeen = true;
     append(msg.mine ? 'done_you' : 'done_them', 'sys');
   }
+  // The lobby's frames are the truth; between them the window counts on its own clock, so a
+  // late frame never swallows a digit or its tick (D-100).
+  const n = state.shownN ? Math.min(msg.n, state.shownN) : msg.n;
+  showDigit(n);
+  state.countN = n;
+  state.countAt = performance.now();
+  if (!countTimer) countTimer = setInterval(localCount, 250);
+}
+
+function showDigit(n) {
+  if (state.shownN === n) return;
+  state.shownN = n;
   el.big.hidden = false;
-  el.big.textContent = String(msg.n);
-  sound.tick(msg.n); // one click a second, a shade higher on the last three (D-96)
+  el.big.textContent = String(n);
+  sound.tick(n); // one click a second, a shade higher on the last three (D-96)
+}
+
+function localCount() {
+  if (state.told || state.gone || !state.countAt) return stopCount();
+  const n = state.countN - Math.floor((performance.now() - state.countAt) / 1000);
+  if (n >= 1 && n < state.shownN) showDigit(n);
+  return undefined;
+}
+
+function stopCount() {
+  clearInterval(countTimer);
+  countTimer = 0;
+  state.countAt = 0;
+  state.shownN = 0;
 }
 
 function onClose(reason) {
   state.told = true;
+  sound.hush();
+  stopCount();
   if (reason === 'done' && !state.countdownSeen) append('done_alone');
   else if (reason === 'quiet') append('quiet_claude');
   else if (reason === 'off') append('off');

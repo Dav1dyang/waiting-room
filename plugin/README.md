@@ -23,17 +23,17 @@ claude plugin disable waiting-room@waiting-room
 claude --plugin-dir ./plugin
 ```
 
-Then turn it on with the invite code you were given:
+Then turn it on. The public lobby is open, so no code is needed; a lobby of your own may ask for one:
 
 ```
-/waiting-room:on DUCK
+/waiting-room:on
 ```
 
 ## The three commands
 
 | Command | What it does |
 | --- | --- |
-| `/waiting-room:on [code]` | Turns waiting-room on and opens setup once. The invite code is only needed the first time. |
+| `/waiting-room:on [code]` | Turns waiting-room on and opens setup once. A code is only needed on a lobby that asks for one, and only the first time. |
 | `/waiting-room:off` | Turns waiting-room off and closes its window. |
 | `/waiting-room:status` | Whether waiting-room is on, and how many other people are waiting for their Claude. |
 
@@ -84,7 +84,7 @@ Everything lives in one directory you can delete: `~/.waiting-room/`
 ```
 token      20 characters, made once
 enabled    an empty file; present means on
-invite     the code you registered with
+invite     the code you registered with, if the lobby asked for one
 endpoint   an optional lobby URL (you create this one)
 ```
 

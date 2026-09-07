@@ -15,8 +15,11 @@ export const DEFAULTS = {
   T: 15_000, F: 20_000, N: 90_000, G: 90_000, P: 600_000, Q: 45_000,
   COUNTDOWN: 10, ROOM_MAX: 1_800_000, PEER_COOLDOWN: 60_000, OPEN_RETRY: 30_000,
   TICKET_TTL: 600_000, MAX_OPENS: 2, RECONNECT_GRACE: 15_000,
-  REPORT_BLOCK: 3, BLOCK_MS: 86_400_000, PROBES_KEPT: 20, PROBE_BYTES: 2048,
+  REPORT_BLOCK: 3, BLOCK_MS: 86_400_000, PROBES_KEPT: 2, PROBES_TOTAL: 40, PROBE_BYTES: 2048,
   TOKEN_TTL: 30 * 86_400_000,
+  // The lobby is one storage value (2 MB). A ceiling on tokens, and when it is reached the
+  // tokens that registered and never sent a hook are swept first: those are the flood, never a person.
+  MAX_TOKENS: 3000, UNHOOKED_TTL: 3_600_000,
   SETUP_GRACE: 600_000, REHEARSAL_GRACE: 20_000,
   invites: [],
   iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }],
@@ -36,15 +39,17 @@ export function hydrate(state) {
   const s = state && typeof state === 'object' ? state : emptyState();
   s.v = STATE_VERSION;
   s.tokens = s.tokens || {}; s.rooms = s.rooms || {}; s.tickets = s.tickets || {}; s.seq = s.seq || 0;
-  for (const t of Object.values(s.tokens)) {
+  const probes = Array.isArray(s.probes) ? s.probes : [];
+  for (const [token, t] of Object.entries(s.tokens)) {
     t.lastPeers = t.lastPeers && !Array.isArray(t.lastPeers) ? t.lastPeers : {};
     t.reports = t.reports && !Array.isArray(t.reports) ? t.reports : {};
-    t.probes = Array.isArray(t.probes) ? t.probes : [];
+    if (Array.isArray(t.probes)) { for (const x of t.probes) probes.push({ token, ...x }); delete t.probes; }
     t.blockedUntil = t.blockedUntil || 0;
     t.lastHookAt = t.lastHookAt || 0;
     t.registeredAt = t.registeredAt || 0;
     t.rehearse = !!t.rehearse;
     t.lastRegisterAt = t.lastRegisterAt || 0; t.lastRehearsalAt = t.lastRehearsalAt || 0;
+    t.hooked = t.hooked !== undefined ? !!t.hooked : true; t.ipHash = t.ipHash || null;
     if (t.task) {
       const k = t.task;
       k.everConnected = !!k.everConnected; k.optedOut = !!k.optedOut; k.opens = k.opens || 0; k.lastOpenAt = k.lastOpenAt || 0;
@@ -57,6 +62,7 @@ export function hydrate(state) {
     r.speaking = r.speaking || {}; r.video = r.video || {}; r.videoLined = !!r.videoLined; r.closing = r.closing || null;
     r.lastSpeechAt = r.lastSpeechAt || r.createdAt || 0;
   }
+  s.probes = probes.slice(-DEFAULTS.PROBES_TOTAL);
   return s;
 }
 
@@ -84,7 +90,7 @@ export class Lobby {
         break;
       }
       case 'rehearse': this.rehearse(ev); break;
-      case 'probes': this.reply({ probes: this.tok(ev.token)?.probes || [] }); break;
+      case 'probes': this.reply({ probes: (this.s.probes || []).filter((x) => x.token === ev.token).map(({ at, data }) => ({ at, data })) }); break;
       case 'hook': this.hook(ev); break;
       case 'ws_open': this.wsOpen(ev); break;
       case 'ws_close': this.wsClose(ev); break;
@@ -112,12 +118,17 @@ export class Lobby {
   }
 
   // ---------- registration ----------
-  register({ token, invite, now, origin = '' }) {
+  register({ token, invite, now, origin = '', ipHash = null }) {
     if (typeof token !== 'string' || !TOKEN_RE.test(token)) return this.reply({ ok: false, error: 'token' });
     const known = this.tok(token);
     const open = this.cfg.invites.length === 0;
     if (!known && !open && !this.cfg.invites.includes(invite)) return this.reply({ ok: false, error: 'invite' });
+    if (!known && Object.keys(this.s.tokens).length >= this.cfg.MAX_TOKENS) {
+      this.sweepUnhooked(now);
+      if (Object.keys(this.s.tokens).length >= this.cfg.MAX_TOKENS) return this.reply({ ok: false, error: 'busy' });
+    }
     const t = known || this.newToken(now);
+    if (typeof ipHash === 'string' && ipHash) t.ipHash = ipHash.slice(0, 32);
     t.enabled = true;
     t.invite = typeof invite === 'string' && invite ? invite.slice(0, 64) : t.invite || null;
     t.lastHookAt = now;
@@ -127,8 +138,15 @@ export class Lobby {
   }
 
   newToken(now) {
-    return { enabled: false, invite: null, registeredAt: now, lastHookAt: now, task: null, win: null, room: null,
-      lastPeers: {}, rehearse: false, reports: {}, blockedUntil: 0, probes: [], lastRegisterAt: 0, lastRehearsalAt: 0 };
+    return { enabled: false, invite: null, registeredAt: now, lastHookAt: now, hooked: false, ipHash: null, task: null, win: null, room: null,
+      lastPeers: {}, rehearse: false, reports: {}, blockedUntil: 0, lastRegisterAt: 0, lastRehearsalAt: 0 };
+  }
+
+  /** When the lobby is full, the tokens that registered and never sent a hook go first. */
+  sweepUnhooked(now) {
+    for (const [token, t] of Object.entries(this.s.tokens)) {
+      if (!t.hooked && !t.win && !t.room && now - Math.max(t.registeredAt, t.lastRegisterAt || 0) > this.cfg.UNHOOKED_TTL) delete this.s.tokens[token];
+    }
   }
 
   off({ token, now }) {
@@ -153,11 +171,13 @@ export class Lobby {
   }
 
   // ---------- hooks ----------
-  hook({ token, event, why, session, ts, now, origin = '' }) {
+  hook({ token, event, why, session, ts, now, origin = '', ipHash = null }) {
     const kind = own(EVENTS, event);
     const t = this.tok(token);
     if (!kind || !t || !t.enabled) return this.reply({});
     t.lastHookAt = now;
+    t.hooked = true;
+    if (typeof ipHash === 'string' && ipHash && !t.ipHash) t.ipHash = ipHash.slice(0, 32);
     if (t.blockedUntil > now) {
       if (t.task && t.task.phase !== 'done') this.endTask(token, now, 'done', now);
       return this.reply({});
@@ -444,11 +464,16 @@ export class Lobby {
       case 'signal':
         if (room && peer && msg.room === room.id) this.send(peer, { type: 'signal', room: room.id, data: msg.data });
         break;
-      case 'speech':
+      case 'speech': {
         if (!room) break;
-        room.speaking[token] = !!msg.active;
-        room.lastSpeechAt = now;
+        // Speech, or the end of speech, marks the moment silence starts. A "false" from someone
+        // who was not speaking is noise and moves nothing.
+        const was = !!own(room.speaking, token);
+        const active = !!msg.active;
+        if (active || was) room.lastSpeechAt = now;
+        room.speaking[token] = active;
         break;
+      }
       case 'video':
         if (!room) break;
         room.video[token] = !!msg.on;
@@ -473,8 +498,13 @@ export class Lobby {
         let size = 0;
         try { size = JSON.stringify(msg.data ?? null).length; } catch { break; }
         if (size > this.cfg.PROBE_BYTES) break;
-        t.probes.push({ at: now, data: msg.data });
-        if (t.probes.length > this.cfg.PROBES_KEPT) t.probes.shift();
+        // One list for the whole lobby, capped twice: a probe is a Phase 0 measurement, and the
+        // state is one storage value, so nobody's client gets to grow it (D-100).
+        if (!Array.isArray(this.s.probes)) this.s.probes = [];
+        this.s.probes.push({ token, at: now, data: msg.data });
+        const mine = this.s.probes.filter((x) => x.token === token);
+        if (mine.length > this.cfg.PROBES_KEPT) this.s.probes.splice(this.s.probes.indexOf(mine[0]), 1);
+        while (this.s.probes.length > this.cfg.PROBES_TOTAL) this.s.probes.shift();
         break;
       }
       default:
@@ -488,7 +518,9 @@ export class Lobby {
     if (target) {
       const p = this.tok(target);
       for (const [who, at] of Object.entries(p.reports)) if (now - at >= this.cfg.BLOCK_MS) delete p.reports[who];
-      p.reports[token] = now;
+      // Three reports must come from three homes, not three tokens from one (the lobby is open).
+      const reporter = this.tok(token);
+      p.reports[(reporter && reporter.ipHash) || token] = now;
       if (Object.keys(p.reports).length >= this.cfg.REPORT_BLOCK) p.blockedUntil = now + this.cfg.BLOCK_MS;
     }
     if (room) return this.leaveRoom(token, now, 'report');
@@ -539,8 +571,7 @@ export class Lobby {
 
   /** A "speaking" flag counts only while speech frames keep coming; a stale flag is silence. */
   anySpeaking(room, now) {
-    const flag = own(room.speaking, room.a) || own(room.speaking, room.b);
-    return !!flag && now - room.lastSpeechAt <= this.cfg.Q;
+    return now - room.lastSpeechAt <= this.cfg.Q;
   }
 
   /** When the next sweep must run, or null when nothing is pending. */
