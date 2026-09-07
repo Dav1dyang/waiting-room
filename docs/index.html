@@ -293,7 +293,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
     <div class="card"><h4>Shaded (queued)</h4><p>Title bar and the count line. Silent. This is what you see most of the time. Note: Chrome's own thin title bar sits above ours; the canvas draws only ours, so judge the double bar in Phase 0. Research 10 read the Chromium source: the page can resize its own window in a Chrome app window, with a 100 px floor. So shaded is 380 by 100 outer: Chrome's thin title bar, then ours, then the count line.</p></div>
     <div class="card"><h4>A stranger arrives</h4><p>The window unrolls, a macOS notification knocks, the door plays, the mic turns on, the red dot appears. "Stranger has entered the room." Nothing to click.</p></div>
     <div class="card"><h4>Talking</h4><p>Buttons: Hang up, Show video, Report, and the speaker toggle. Meters move only with real sound. Quiet for Q seconds and the room shades back up.</p></div>
-    <div class="card"><h4>Closing</h4><p>"Your Claude is done. Closing in 5." with a big 5 and a knock on 3, 2, 1. Then the window closes itself. If the stranger leaves instead, the window shades back up.</p></div>
+    <div class="card"><h4>Closing</h4><p>"Your Claude is done. Closing in 10." with a big 10 in the desk tint's complement and a tick each second. Then the window closes itself. If the stranger leaves instead, the window shades back up.</p></div>
     <div class="card"><h4>Video</h4><p>Both clicked Show video: two small feeds above the log, color under a fine dot screen, in the same window. Either can hide theirs.</p></div>
   </div>
 
@@ -308,7 +308,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
                 <tr><td>Your Claude asks permission, a structured question, tool input, or stops with a background task running</td><td class="line"><span class="you">YOU:</span> brb, my Claude needs me</td><td class="line"><span class="them">STRANGER:</span> brb, my Claude needs me</td></tr>
     <tr><td>You answer and Claude continues</td><td class="line"><span class="you">YOU:</span> back</td><td class="line"><span class="them">STRANGER:</span> back</td></tr>
     <tr><td>Your Claude ends its turn with a question</td><td class="line">same as a pause, for up to G seconds</td><td class="line">same as a pause</td></tr>
-    <tr><td>Your Claude finishes</td><td class="line">Your Claude is done. Closing in 5.</td><td class="line">Stranger's Claude is done. Leaving in 5.</td></tr>
+    <tr><td>Your Claude finishes</td><td class="line">Your Claude is done. Closing in 10.</td><td class="line">Stranger's Claude is done. Leaving in 10.</td></tr>
     <tr><td>After the countdown</td><td class="line">(window closes)</td><td class="line">Stranger has left the room. (then shades)</td></tr>
     <tr><td>You hang up</td><td class="line">(window closes)</td><td class="line">Stranger has left the room. (then shades)</td></tr>
     <tr><td>Both click video</td><td class="line">Video is on.</td><td class="line">Video is on.</td></tr>
@@ -541,7 +541,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
     <tr><td class="k">docs/index.html</td><td>This plan (v0.6). Older versions in docs/archive.</td></tr>
     <tr><td class="k">docs/DECISIONS.md · QUESTIONS.md · CHANGELOG.md</td><td>Decision log, questions with your answers, change log.</td></tr>
     <tr><td class="k">docs/research/01 to 10</td><td>Art lineage; plugin mechanics; free hosting and WebRTC; product history and safety; Omegle UI and 2009 web; plugin ecosystem and naming; retro chat-window design; auto-open window mechanics; Poolsuite color system and retro-modern principles; dot-screen video and the window shade.</td></tr>
-    <tr><td class="k">design/</td><td>Mockup v2.4 working files, generator, and the font. v1 archived under design/v1-wait-together.</td></tr>
+    <tr><td class="k">design/</td><td>Mockup v2.5 working files, generator, and the font. v1 archived under design/v1-wait-together.</td></tr>
     <tr><td class="k">plugin/</td><td>The plugin: eight async hooks, three commands, classifier, window opener, 39 tests. Validates strict.</td></tr>
     <tr><td class="k">worker/</td><td>The lobby: Worker, Durable Object, pure core (43 tests), room and setup pages (14 unit tests), one wait through wrangler dev, 10 Playwright end-to-end cases.</td></tr>
     <tr><td class="k">docs/PROTOCOL.md · docs/PHASE0.md · scripts/probe-mac.sh</td><td>The contract; the Phase 0 measurements and checklist; the one-window probe for a Mac.</td></tr>

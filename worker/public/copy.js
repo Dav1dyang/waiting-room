@@ -7,8 +7,8 @@ export const LINES = {
   hear: 'They can hear you. Say hi.',
   brb: 'brb, my Claude needs me',
   back: 'back',
-  done_you: 'Your Claude is done. Closing in 5.',
-  done_them: "Stranger's Claude is done. Leaving in 5.",
+  done_you: 'Your Claude is done. Closing in 10.',
+  done_them: "Stranger's Claude is done. Leaving in 10.",
   left: 'Stranger has left the room.',
   requeued: 'Back in the queue.',
   video_on: 'Video is on.',
@@ -16,14 +16,15 @@ export const LINES = {
   quiet_room: 'Quiet room. Back in the queue.',
   time_up: 'Thirty minutes. Back in the queue.',
   reported: 'Reported. Leaving.',
-  rehearsal: 'This is a test. Closing in 5.',
+  rehearsal: 'This is a test. Closing in 10.',
   done_alone: 'Your Claude is done.',
   off: 'waiting-room is off. Closing.',
 };
 
 /** The count line: always other people, never you (D-70). */
-export function countLine(others) {
-  if (others <= 0) return 'Nobody else is waiting right now. Your Claude is still working.';
+export function countLine(others, inRoom = false) {
+  // In a room the second sentence is a given, and "waiting" reads oddly beside a stranger.
+  if (others <= 0) return inRoom ? 'Nobody else is waiting right now.' : 'Nobody else is waiting right now. Your Claude is still working.';
   if (others === 1) return '1 other is waiting for their Claude.';
   return `${others} others are waiting for their Claude.`;
 }
@@ -40,6 +41,7 @@ export const UI = {
   report: 'Report',
   sounds: 'Sounds',
   mute: 'Mute',
+  unmute: 'Unmute',
   live: 'live',
   stale: 'This window is out of date. Closing.',
   canClose: 'You can close this window.',
@@ -47,7 +49,7 @@ export const UI = {
 
 /** The setup page, top to bottom. */
 export const SETUP = {
-  intro: 'Set up once. When your Claude works for more than 15 seconds, a small window opens behind your terminal with the count of people waiting. When a stranger arrives it unrolls and you are talking. When either Claude is done, it counts down from 5 and closes.',
+  intro: 'Set up once. When your Claude works for more than 15 seconds, a small window opens behind your terminal with the count of people waiting. When a stranger arrives it unrolls and you are talking. When either Claude is done, it counts down from 10 and closes.',
   mic: 'Microphone allowed.',
   micSub: 'It turns on when a stranger enters, never while you wait. In the browser prompt, choose "Allow on every visit".',
   micBtn: 'Allow microphone',
@@ -58,7 +60,7 @@ export const SETUP = {
   soundSub: 'A door sound when a stranger enters, softer when they leave.',
   soundBtn: 'Play the door',
   rehearsal: 'Test window.',
-  rehearsalSub: 'Click, then send Claude any message. A test window opens behind the terminal and closes itself in 5 seconds.',
+  rehearsalSub: 'Click, then send Claude any message. A test window opens behind the terminal, counts down from 10, and closes itself.',
   rehearsalBtn: 'Set up a test window',
   rehearsalArmed: 'Ready. Now send Claude any message.',
   tint: 'Desktop tint.',
@@ -69,9 +71,16 @@ export const SETUP = {
   badToken: 'This setup link is not valid. Run /waiting-room:on in Claude Code to get a fresh one.',
 };
 
+// Each desk tint carries its accent: the complementary pastel (the hue turned half way round in
+// OKLCH, same lightness and chroma; Dusk's yellow lifted, since a yellow that dark is mud).
+// The accent is the countdown digit (D-96).
 export const TINTS = [
-  ['Pool', '#91CECF'],
-  ['Shell', '#E6B1B2'],
-  ['Mint', '#A7CDAB'],
-  ['Dusk', '#BBBCE9'],
+  ['Pool', '#91CECF', '#ECAFB0'],
+  ['Shell', '#E6B1B2', '#88D0D1'],
+  ['Mint', '#A7CDAB', '#DBB1D9'],
+  ['Dusk', '#BBBCE9', '#EFE088'],
 ];
+export function accentFor(hex) {
+  const row = TINTS.find((t) => t[1].toLowerCase() === String(hex || '').toLowerCase());
+  return row ? row[2] : TINTS[0][2];
+}

@@ -121,6 +121,7 @@ test('every protocol line key has copy', () => {
 
 test('the count line always means other people', () => {
   assert.equal(countLine(0), 'Nobody else is waiting right now. Your Claude is still working.');
+  assert.equal(countLine(0, true), 'Nobody else is waiting right now.', 'in a room, no second sentence');
   assert.equal(countLine(1), '1 other is waiting for their Claude.');
   assert.equal(countLine(4), '4 others are waiting for their Claude.');
 });

@@ -104,7 +104,7 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
   const helloA = (await waitFor(a, (m) => m.type === 'hello')).m;
   assert.equal(helloA.state, 'shaded');
   assert.equal(helloA.rehearsal, false);
-  assert.equal(helloA.cfg.countdown, 5);
+  assert.equal(helloA.cfg.countdown, 10);
 
   const b = connect(openB);
   await waitFor(b, (m) => m.type === 'hello');
@@ -133,8 +133,8 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
   await post('/api/hook', { token: A, event: 'stopped' });
   await waitFor(a, (m) => m.type === 'state' && m.state === 'closing');
   await waitFor(b, (m) => m.type === 'state' && m.state === 'closing');
-  assert.equal((await waitFor(a, (m) => m.type === 'countdown' && m.n === 5)).m.mine, true);
-  assert.equal((await waitFor(b, (m) => m.type === 'countdown' && m.n === 5)).m.mine, false);
+  assert.equal((await waitFor(a, (m) => m.type === 'countdown' && m.n === 10)).m.mine, true);
+  assert.equal((await waitFor(b, (m) => m.type === 'countdown' && m.n === 10)).m.mine, false);
 
   const beats = [];
   for (const n of [4, 3, 2, 1]) {
@@ -149,7 +149,7 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
 
   // A's window is told to close; B is told and shades. The window closes itself on the frame:
   // under wrangler dev a socket the Worker closes stays open on the client, see NOTES.md.
-  assert.equal((await waitFor(a, (m) => m.type === 'close')).m.reason, 'done');
+  assert.equal((await waitFor(a, (m) => m.type === 'close', 18000)).m.reason, 'done');
   await waitFor(b, (m) => m.type === 'line' && m.key === 'left');
   await waitFor(b, (m) => m.type === 'state' && m.state === 'shaded');
   await waitFor(b, (m) => m.type === 'line' && m.key === 'requeued');
