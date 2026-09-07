@@ -83,7 +83,7 @@ none ──started──▶ armed ──T──▶ queued ◀──▶ paused �
 - `paused`: `needs_you` or `paused` arrived. Not pairable. If in a room, the away line posts. Any `started` or `tick` resumes to `queued` and posts "back".
 - `done`: `stopped`, or grace over, or silence. A connected window closes with a countdown if in a room, at once if alone. A later hook of any kind starts a new task. If a new task starts during the goodbye, the window stays and shades instead of closing.
 
-Rules: one "open" per task (D-68), plus one retry after OPEN_RETRY only if no window ever connected. A window whose socket drops keeps its place for RECONNECT_GRACE (15 s): the room survives, the peer hears nothing, and the page reconnects with the same ticket; past the grace the peer sees "left" and shades. A ticket is bound to its task, lives as long as the task once used, and dies with it. Closing the window by hand marks the task opted out: no reopen, no pairing, until the next task. Hanging up does the same (D-49). One live window per token (D-50).
+Rules: one "open" per task (D-68), plus one retry after OPEN_RETRY only if no window ever connected. A window whose socket drops keeps its place for RECONNECT_GRACE (15 s): the room survives, the peer hears nothing, and the page reconnects with the same ticket; past the grace the peer sees "left" and shades. A ticket is bound to its task, lives as long as the task once used, and dies with it; while any window exists for a token, connected or in grace, only that window's ticket may attach. Closing the window by hand marks the task opted out: no reopen, no pairing, until the next task. Hanging up does the same (D-49). One live window per token (D-50).
 
 ## 5. Window states
 

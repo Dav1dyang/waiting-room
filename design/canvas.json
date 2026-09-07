@@ -21,7 +21,7 @@
       "x": 0,
       "y": 720,
       "w": 420,
-      "h": 188,
+      "h": 190,
       "title": "3 \u00b7 Queued: shaded, with the count"
     },
     {
@@ -29,7 +29,7 @@
       "x": 500,
       "y": 720,
       "w": 420,
-      "h": 335,
+      "h": 337,
       "title": "4 \u00b7 A stranger arrived: talking"
     },
     {
@@ -37,7 +37,7 @@
       "x": 1000,
       "y": 720,
       "w": 420,
-      "h": 335,
+      "h": 337,
       "title": "5 \u00b7 Your Claude needs you"
     },
     {
@@ -45,7 +45,7 @@
       "x": 1500,
       "y": 720,
       "w": 420,
-      "h": 335,
+      "h": 337,
       "title": "6 \u00b7 Stranger's Claude needs them"
     },
     {
@@ -53,7 +53,7 @@
       "x": 0,
       "y": 1300,
       "w": 420,
-      "h": 335,
+      "h": 337,
       "title": "7 \u00b7 Your Claude is done: closing in 5"
     },
     {
@@ -61,7 +61,7 @@
       "x": 500,
       "y": 1300,
       "w": 420,
-      "h": 335,
+      "h": 337,
       "title": "8 \u00b7 Stranger left: shades back up"
     },
     {
@@ -69,7 +69,7 @@
       "x": 1000,
       "y": 1300,
       "w": 420,
-      "h": 442,
+      "h": 444,
       "title": "9 \u00b7 Video on, dot screen"
     },
     {

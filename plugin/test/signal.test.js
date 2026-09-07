@@ -225,6 +225,26 @@ test('an ordinary open quits the running browser first; a test window keeps it',
   assert.ok(fs.existsSync(quitFile), 'the running browser was quit before the open');
 });
 
+test('an opener that lost the lock to a takeover does nothing', async (t) => {
+  const { home, dir } = makeHome();
+  const opener = makeOpener(home);
+  const quitFile = path.join(home, 'quit.txt');
+  const lock = path.join(dir, 'opening.lock');
+  fs.mkdirSync(lock, { recursive: true });
+  fs.writeFileSync(path.join(lock, 'owner'), 'open.other');
+  t.after(() => removeHome(home));
+
+  const { run: runBash, PLUGIN } = require('./helpers');
+  const run = await runBash('bash', [path.join(PLUGIN, 'scripts', 'deliver.sh'), '--open', 'http://127.0.0.1:1/room?t=old', '--owner', 'open.mine'], '', home, {
+    WAITING_ROOM_OPEN_CMD: opener.script, WAITING_ROOM_QUIT_CMD: `touch ${JSON.stringify(quitFile)}`, WAITING_ROOM_URL: 'http://127.0.0.1:1',
+  });
+  assertSilent(run, 'lost lock');
+  await sleep(300);
+  assert.deepStrictEqual(opener.lines(), [], 'no window from a stale opener');
+  assert.ok(!fs.existsSync(quitFile), 'and no quit either');
+  assert.ok(fs.existsSync(lock), 'the other owner keeps the lock');
+});
+
 test('two hooks at once still open exactly one window', async (t) => {
   const lobby = await startLobby();
   const { home } = makeHome();
