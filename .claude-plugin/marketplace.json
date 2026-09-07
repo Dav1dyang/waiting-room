@@ -7,7 +7,7 @@
       "name": "waiting-room",
       "source": "./plugin",
       "description": "While your Claude works, a small window opens and puts you on a call with a stranger whose Claude is also working. It closes when either Claude finishes. Nothing about your task is ever shared.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "author": { "name": "David Yang" },
       "homepage": "https://github.com/Dav1dyang/waiting-room",
       "repository": "https://github.com/Dav1dyang/waiting-room",
