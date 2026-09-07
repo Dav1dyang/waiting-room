@@ -161,7 +161,14 @@ async function start() {
       say(SETUP.badToken);
     }
   };
-  el.doneBtn.onclick = () => say(SETUP.closeTab);
+  el.doneBtn.onclick = () => {
+    say(SETUP.closeTab);
+    try {
+      window.close(); // a window the OS opened may close itself; if not, the line above stands
+    } catch {
+      // the line above stands
+    }
+  };
 
   // Enter presses the one default button the mockup marks.
   window.addEventListener('keydown', (ev) => {
