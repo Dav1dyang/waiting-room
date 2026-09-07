@@ -103,7 +103,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
 <div class="page">
 <aside class="rail">
   <div class="brand">waiting-room</div>
-  <div class="sub">plan v0.6<br>2026-09-06</div>
+  <div class="sub">plan v0.5<br>2026-09-06</div>
   <nav aria-label="Sections">
     <a href="#tldr"><span class="n">00</span>Summary</a>
     <a href="#decided"><span class="n">01</span>What we decided</a>
@@ -123,7 +123,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
 
 <main>
 <header>
-  <span class="eyebrow">Plan v0.6 · replaces v0.5</span>
+  <span class="eyebrow">Plan v0.5 · replaces v0.4</span>
   <h1>waiting-room</h1>
   <p class="lede">While your Claude works, a small shaded window shows how many others are waiting too. When a stranger is matched it unrolls and you talk. When either Claude finishes, it closes. Every wait, a different stranger.</p>
   <div class="meta">
@@ -138,10 +138,10 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
     <span class="eyebrow">Summary</span>
     <ul>
       <li><strong>What it is.</strong> A Claude Code plugin plus one small web page. Hooks tell a tiny lobby "my Claude started" and "my Claude stopped". The lobby pairs two people whose Claudes are both working and connects them by audio, browser to browser. Nothing about your task ever leaves your machine.</li>
-      <li><strong>What changed since v0.5.</strong> The alpha is built and live. Plugin, lobby, and window exist, with 103 tests across unit, integration, and two-browser end-to-end runs, and a live lobby on workers.dev behind an invite code. Phase 0 browser tests ran on a real Mac: a window opened into the everyday Chrome steals focus, so the window now lives in the plugin's own Chrome instance, launched hidden, which also lets the door and the stranger's voice play with no click (D-87). The threshold is 15 s. Two review rounds found 27 holes in the lobby, all closed (D-85, D-86).</li>
-      <li><strong>What is not verified yet.</strong> A call across two real home networks, the mic permission cold path in the plugin's Chrome profile, and the week of hook logging behind the timing numbers. Ten minutes at the keyboard covers the first two: <span>docs/PHASE0.md</span>.</li>
+      <li><strong>What changed since v0.4.</strong> You answered the last three questions. Pool is the default tint, the lines are Geneva, and a stranger connects automatically: no pick-up click, because turning the plugin on is the consent. The Knock state is gone, a quiet room shades back up on its own, and the no-click audio test joins the focus test as a gate. TURN billing is settled: STUN only until a pair fails to connect, then a card with a cap we build ourselves. The threshold is 15 s now, not 30.</li>
+      <li><strong>Two things to watch.</strong> A window on every long turn is fine only if it never steals keyboard focus from the terminal. And with no click, a fresh app window must turn the mic on and play the stranger's audio with no gesture. Two short Phase 0 tests decide; each has a fallback: the notification path, and the pick-up click.</li>
       <li><strong>The look.</strong> Unchanged in spirit: a Classic Mac OS window in the Poolsuite grammar, black at one pixel, pixel type at native size, one texture. New: pastel desktop tints chosen once at setup, a bar-graph audio meter like Poolsuite's radio, and the dot screen on video. Research 09 set the hexes and the icon grid; research 10 verified the dot screen and the shade. One more change from the research: picking up takes one click on each side, so the mic never turns on by itself.</li>
-      <li><strong>Next.</strong> Push the repo, run the ten-minute checklist, then Phase 2: a handful of friends with the invite code and the hook log on for a week.</li>
+      <li><strong>Next.</strong> No questions open. Phase 0: install the logging plugin, use it for a week, and run the short tests that settle the four timing numbers and the window mechanics.</li>
     </ul>
   </div>
 </section>
@@ -401,7 +401,6 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
 
 <section id="plan">
   <h2>06 · Build plan</h2>
-  <p class="note"><strong>Status, 2026-09-06.</strong> Phase 0 browser tests are done (section results in docs/PHASE0.md; the hook-logging week is not). Phase 1 is built: plugin, lobby, window, tests. The lobby is deployed. Phase 2 starts with the checklist and the invite code.</p>
   <div class="cols">
     <div class="card"><h4>Phase 0 · Measure, about a week</h4>
       <ul>
@@ -511,15 +510,12 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
     <tr><td>D-82</td><td>STUN only until a pair fails to connect; then the card, with our own relay cap.</td><td>Proposed</td></tr>
     <tr><td>D-83</td><td>Arm threshold 15 s, amending D-06. Provisional until Phase 0 logging.</td><td>Accepted (your answer)</td></tr>
     <tr><td>D-84</td><td>The rehearsal rides the next hook: the real open path, not a popup.</td><td>Proposed</td></tr>
-    <tr><td>D-85, D-86</td><td>The lobby model as built, after two review rounds: session sets, ordered hooks, reconnect grace, deadline alarms, per-reporter flags, hydrated snapshots.</td><td>Accepted (built, tested)</td></tr>
-    <tr><td>D-87</td><td>The room window lives in the plugin's own Chrome instance, launched hidden, with the autoplay flag; it quits when idle.</td><td>Accepted (measured on a Mac)</td></tr>
   </table></div>
 </section>
 
 <section id="changes">
   <h2>11 · Change log</h2>
   <ul>
-    <li><strong>v0.6, 2026-09-06.</strong> The alpha built: plugin, lobby, window, 103 tests, live deploy. Phase 0 browser tests on a real Mac; the window moves into its own Chrome instance (D-87). Two review rounds on the lobby core (D-85, D-86). Threshold 15 s (D-83), rehearsal via the next hook (D-84).</li>
     <li><strong>v0.5, 2026-09-06.</strong> Three answers folded in: Pool, automatic connect, Geneva. Knock state removed, quiet-room rule added, audio-with-no-click test made a gate. TURN billing verified and the card timing set. Threshold 15 s; the rehearsal rides the next hook. D-78 to D-84; D-75 superseded.</li>
     <li><strong>v0.4, 2026-09-06.</strong> Six answers folded in. The window opens when queued, shaded, and stays while queued. Five-line log, dot-screen video, pastel tints, bar-graph meter, Chrome-only alpha. Review amendments: one open per task, quiet detection, count means others, mic on match, focus test decides. Research 09 and 10 folded in: final palette, icons, ledge buttons, meters, the pick-up click, the shade geometry. Mockup v2.2 replaces v2 on the canvas. D-62 to D-77. Q-26 to Q-28 opened.</li>
     <li><strong>v0.3, 2026-09-06.</strong> Renamed to waiting-room. No home page, no kept window; self-opening room window; pauses as lines; Classic Mac OS design lead. D-38 to D-61.</li>
@@ -533,18 +529,16 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
   <h2>12 · Files and sources</h2>
   <div class="tbl"><table>
     <tr><th>Path</th><th>What</th></tr>
-    <tr><td class="k">docs/index.html</td><td>This plan (v0.6). Older versions in docs/archive.</td></tr>
+    <tr><td class="k">docs/index.html</td><td>This plan (v0.5). Older versions in docs/archive.</td></tr>
     <tr><td class="k">docs/DECISIONS.md · QUESTIONS.md · CHANGELOG.md</td><td>Decision log, questions with your answers, change log.</td></tr>
     <tr><td class="k">docs/research/01 to 10</td><td>Art lineage; plugin mechanics; free hosting and WebRTC; product history and safety; Omegle UI and 2009 web; plugin ecosystem and naming; retro chat-window design; auto-open window mechanics; Poolsuite color system and retro-modern principles; dot-screen video and the window shade.</td></tr>
     <tr><td class="k">design/</td><td>Mockup v2.3 working files, generator, and the font. v1 archived under design/v1-wait-together.</td></tr>
-    <tr><td class="k">plugin/</td><td>The plugin: eight async hooks, three commands, classifier, window opener, 35 tests. Validates strict.</td></tr>
-    <tr><td class="k">worker/</td><td>The lobby: Worker, Durable Object, pure core (43 tests), room and setup pages (14 unit tests), one wait through wrangler dev, 10 Playwright end-to-end cases.</td></tr>
-    <tr><td class="k">docs/PROTOCOL.md · docs/PHASE0.md · scripts/probe-mac.sh</td><td>The contract; the Phase 0 measurements and checklist; the one-window probe for a Mac.</td></tr>
+    <tr><td class="k">prototype/plugin/</td><td>Plugin skeleton: manifest, three commands, eight hooks, toggle and signal scripts. Validates strict.</td></tr>
     <tr><td class="k">artifacts</td><td><a href="https://claude.ai/code/artifact/7f5e1d8a-4c07-46ab-9506-507936b4ff27">This plan</a> · <a href="https://claude.ai/code/artifact/447cf200-0465-4dcf-8ff0-984537a43877">Design canvas</a></td></tr>
   </table></div>
 </section>
 
-<footer>waiting-room · plan v0.6 · 2026-09-06 · Omegle is the joke and the reference, not the name, the logo, or the words. Poolsuite is the taste reference, not the assets.</footer>
+<footer>waiting-room · plan v0.5 · 2026-09-06 · Omegle is the joke and the reference, not the name, the logo, or the words. Poolsuite is the taste reference, not the assets.</footer>
 </main>
 </div>
 </body>

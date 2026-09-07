@@ -1,31 +1,57 @@
 # waiting-room
 
-A Claude Code plugin idea: while your Claude is busy on a long task, you get a
-live call with a stranger whose Claude is also busy. The call ends the moment
-one Claude finishes. Every wait, a different stranger.
+A Claude Code plugin. While your Claude works for more than 15 seconds, a small window opens behind your terminal and puts you on an audio call with a stranger whose Claude is also working. It closes itself with a five-second countdown when either Claude finishes. Every wait, a different stranger. The stranger never learns anything about your task.
 
-This folder is the **plan**, not the code yet.
+Status, 2026-09-06: the alpha is built, tested, and the lobby is live on workers.dev. Invite only.
+
+## Try it
+
+```
+claude --plugin-dir ./plugin          # or install it, see plugin/README.md
+/waiting-room:on <invite code>        # prints the rules, opens the setup page once
+```
+
+The setup page opens in the plugin's own Chrome window: allow the microphone ("on every visit") and notifications, play the door, pick a tint, then arm a test window and send Claude any message. From then on, give Claude something that takes a while.
+
+```
+/waiting-room:status                  # on or off, and how many others are waiting
+/waiting-room:off                     # stops everything and closes any window
+```
+
+## What leaves your machine
+
+One small POST per hook: your token, one of five words (`started`, `tick`, `needs_you`, `paused`, `stopped`), why, a hash of the session id, and a timestamp. Nothing else. The classifier runs on your machine (`plugin/scripts/classify.js`) and the tests check that no prompt, path, or tool input ever reaches the body.
+
+## Map
 
 | Path | What it is |
 | --- | --- |
-| `docs/index.html` | The plan, v0.5. Open it in a browser. Start here. v0.1 to v0.4 are in `docs/archive/`. |
-| `docs/archive/plan-v0.1.html` | The first plan, kept for the record. |
-| `design/` | Mockup v2.3 (Classic Mac OS, Poolsuite grammar, final tokens): `build.py`, the `.dc.html` artboards, `canvas.json`, `fonts/` (ChiKareGo2, CC BY). `v1-wait-together/` is the archived first design. Live canvas: https://claude.ai/code/artifact/447cf200-0465-4dcf-8ff0-984537a43877 |
-| `docs/DECISIONS.md` | Decision log (D-xx). Every non-obvious choice and why. |
-| `docs/QUESTIONS.md` | Open questions for David (Q-xx) with the default assumed. |
-| `docs/CHANGELOG.md` | What changed in the plan, by date. |
-| `docs/research/01-art-theory-lineage.md` | Art, games, media theory on waiting with strangers. |
-| `docs/research/02-claude-code-plugin-mechanics.md` | Verified plugin + hook facts with doc links. |
-| `docs/research/03-free-hosting-and-webrtc.md` | Free-tier hosting, WebRTC, TURN cost model. |
-| `docs/research/04-product-history-and-safety.md` | Omegle, Chatroulette, Portal, Focusmate lessons. |
-| `docs/research/05-omegle-ui-and-2009-web-design.md` | Omegle UI anatomy from Wayback captures; 2009 web grammar; homage style guide. |
-| `docs/research/06-plugin-ecosystem-and-naming.md` | Marketplaces explained, 60+ plugin names, naming patterns, fun plugins, name collision check. |
-| `docs/research/07-retro-chat-window-design.md` | 2000s/2010s chat-window anatomy, CSS-recreatable OS chrome, retro-revival taste, three directions for the small window. |
-| `docs/research/07-retro-chat-window-design.md` | 2000s and 2010s chat-window anatomy, CSS-recreatable textures, retro-without-cheap rules, three directions. |
-| `docs/research/08-auto-popup-window-mechanics.md` | Can a window open and close itself from a hook: verified browser rules and the alpha mechanism. |
-| `docs/research/09-poolsuite-color-and-retro-modern.md` | Poolsuite's colours, nine themes, icons, buttons, meter, verified live; pastel palette, icon grid, and retro-but-modern rules for our window. |
-| `docs/research/10-video-dither-and-window-shade.md` | The dot screen as CSS (no processing), window shade and resize verified in Chromium source, open-when-queued consequences. |
-| `prototype/plugin/` | Validated plugin skeleton: seven hooks, `/waiting-room:on|off|status`, on-machine pause classifier, open-on-match. Phase 0 starting point, not a product. |
+| `plugin/` | The Claude Code plugin: eight async hooks, three commands, the classifier, the window opener, 35 tests. `plugin/README.md` for install and uninstall. |
+| `worker/` | The lobby: one Cloudflare Worker, one Durable Object, the pure state machine in `src/lobby-core.js`, the room and setup pages in `public/`, 58 unit and integration tests, 10 Playwright end-to-end cases. `worker/README.md` for deploy. |
+| `scripts/probe-mac.sh` | Opens one real room window through the real path and reads back what it measured. |
+| `docs/PROTOCOL.md` | The contract between plugin, lobby, and window: routes, messages, numbers, states. |
+| `docs/PHASE0.md` | What was measured on a Mac, and the ten-minute checklist that is left. |
+| `docs/index.html` | The plan, v0.6. Older plans in `docs/archive/`. |
+| `docs/DECISIONS.md`, `docs/CHANGELOG.md`, `docs/QUESTIONS.md` | Decision log D-01 to D-87, change log, the questions and their answers. |
+| `docs/research/` | Ten research memos: lineage, plugin mechanics, hosting and WebRTC, product history and safety, Omegle UI, ecosystem and naming, retro chat windows, auto-open windows, Poolsuite colour, video dither and window shade. |
+| `design/` | Mockup v2.3: the generator, ten artboards, the canvas, the font (ChiKareGo2, CC BY). |
 
-Plan v0.1 written 2026-09-05, v0.2 to v0.5 on 2026-09-06, with Claude Code (Fable 5.1) and ten Opus 5 research agents.
-Plan artifact: https://claude.ai/code/artifact/7f5e1d8a-4c07-46ab-9506-507936b4ff27
+## Tests
+
+```
+cd worker && npm install
+npm test                              # core, pages, one whole wait through wrangler dev
+npm run e2e                           # two Chrome windows meet through the mock lobby
+WR_E2E_BASE=https://<lobby> WR_E2E_INVITE=<code> npm run e2e   # the same, against a live lobby
+bash ../plugin/test/run.sh            # the plugin against a fake lobby
+claude plugin validate --strict ../plugin
+bash ../scripts/probe-mac.sh          # one real window on this Mac (needs Google Chrome)
+```
+
+Set `WAITING_ROOM_LOG=~/.waiting-room/log.txt` in your shell for a week and every hook appends one line, the five fields and the reply: that is the Phase 0 log the timing numbers come from.
+
+## Look
+
+Classic Mac OS chrome in the Poolsuite grammar: cream panel, one-pixel black, pastel desktop tints, pixel type for the title and labels, Geneva for the lines, a bar-graph meter, and a CSS dot screen over video. Nothing here is an Apple or Poolsuite asset. Omegle is the joke and the reference, never the copy.
+
+Plan written 2026-09-05 to 2026-09-06 with Claude Code (Fable 5.1), ten Opus 5 research agents, three Opus 5 builders, and two review passes (Codex, Claude). Plan artifact: https://claude.ai/code/artifact/7f5e1d8a-4c07-46ab-9506-507936b4ff27. Canvas: https://claude.ai/code/artifact/447cf200-0465-4dcf-8ff0-984537a43877.
