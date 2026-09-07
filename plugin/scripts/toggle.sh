@@ -29,6 +29,7 @@ say() {
     from_now_on) printf '%s\n' "When Claude works for more than 15 seconds, a small window opens behind your terminal." ;;
     bad_invite)  printf '%s\n' "That invite code did not work." ;;
     busy)        printf '%s\n' "Too many wrong codes for now. Wait ten minutes, then try again." ;;
+    relink)      printf '%s\n' "waiting-room does not know this machine any more. Run /waiting-room:on again." ;;
     refused)     printf '%s\n' "Could not turn waiting-room on. Ask whoever gave you the invite code." ;;
     unreachable) printf '%s\n' "Cannot reach waiting-room right now. Try again in a minute." ;;
     no_lobby)    printf '%s\n' "Cannot reach waiting-room right now. Try again in a minute." ;;
@@ -75,21 +76,21 @@ get_json() {
   printf '%s' "$out"
 }
 
-# Read a lobby reply and print four lines: ok, error, count, setup.
+# Read a lobby reply and print five lines: ok, error, count, setup, enabled.
 # Anything missing comes back as an empty line, so the caller never has to think about it.
 lobby_fields() {
-  command -v node >/dev/null 2>&1 || { printf '\n\n\n\n'; return 0; }
+  command -v node >/dev/null 2>&1 || { printf '\n\n\n\n\n'; return 0; }
   printf '%s' "$1" | node -e '
 let d = "";
 process.stdin.setEncoding("utf8");
-process.stdin.on("error", () => process.stdout.write("\n\n\n\n"));
+process.stdin.on("error", () => process.stdout.write("\n\n\n\n\n"));
 process.stdin.on("data", (c) => { d += c; });
 process.stdin.on("end", () => {
   let j = {};
   try { j = JSON.parse(d) || {}; } catch (e) { j = {}; }
   const one = (v) => (v === undefined || v === null || typeof v === "object" ? "" : String(v).replace(/[\r\n]+/g, " "));
-  process.stdout.write([one(j.ok), one(j.error), one(j.count), one(j.setup)].join("\n") + "\n");
-});' 2>/dev/null || printf '\n\n\n\n'
+  process.stdout.write([one(j.ok), one(j.error), one(j.count), one(j.setup), one(j.enabled)].join("\n") + "\n");
+});' 2>/dev/null || printf '\n\n\n\n\n'
 }
 
 field() {
@@ -168,7 +169,7 @@ do_off() {
 }
 
 do_status() {
-  local token endpoint reply count
+  local token endpoint reply count fields
   token="$(wr_token)"
   endpoint="$(wr_endpoint)"
 
@@ -180,11 +181,18 @@ do_status() {
     say no_lobby
     return 0
   }
-  count="$(field "$(lobby_fields "$reply")" 3)"
+  fields="$(lobby_fields "$reply")"
+  count="$(field "$fields" 3)"
   case "$count" in
-    ''|*[!0-9]*) say no_lobby ;;
-    *) count_line "$count" ;;
+    ''|*[!0-9]*) say no_lobby; return 0 ;;
   esac
+  # A real answer, but on here and unknown there: the lobby forgets a machine after a month
+  # away, or after a reset. Only "on" again can fix that.
+  if wr_is_enabled && [ "$(field "$fields" 5)" != "true" ]; then
+    say relink
+    return 0
+  fi
+  count_line "$count"
   return 0
 }
 

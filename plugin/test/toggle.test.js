@@ -157,6 +157,17 @@ test('status survives a lobby that answers with nonsense', async (t) => {
   assert.deepStrictEqual(lines(run), ['waiting-room is on.', 'Cannot reach waiting-room right now. Try again in a minute.']);
 });
 
+test('status says so when the lobby no longer knows this machine', async (t) => {
+  const lobby = await startLobby();
+  const { home } = makeHome();
+  lobby.reply.count = { count: 2, enabled: false, window: false };
+  t.after(async () => { await lobby.close(); removeHome(home); });
+
+  const run = await runToggle(['status'], home, { WAITING_ROOM_URL: lobby.url });
+  assert.strictEqual(run.status, 0);
+  assert.deepStrictEqual(lines(run), ['waiting-room is on.', 'waiting-room does not know this machine any more. Run /waiting-room:on again.']);
+});
+
 test('an invite code with shell in it is just characters', async (t) => {
   const lobby = await startLobby();
   const { home } = makeHome({ enabled: false });

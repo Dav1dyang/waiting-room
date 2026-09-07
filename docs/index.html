@@ -516,6 +516,8 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
     <tr><td>D-88</td><td>Copy review outcome: privacy promises scoped to what the plugin does, plain words on the setup page, the chatroom voice kept on purpose.</td><td>Accepted (Codex copy review)</td></tr>
     <tr><td>D-89</td><td>Hook work that must outlive the hook (the stop POST, the opener, the idle check) runs detached, since Claude Code kills async hooks at teardown.</td><td>Accepted (internal review)</td></tr>
     <tr><td>D-90</td><td>The browser reaper waits ten minutes after setup and twenty seconds after a test window, so the setup page and the test window survive a short turn; off ends both.</td><td>Accepted (verified live)</td></tr>
+    <tr><td>D-91</td><td>Third review round on the edges: probe only on request, frame and invite-guess limits, bounded bodies, listen-only mic fallback, stricter URL checks and file modes; six items deferred to Phase 2 with reasons.</td><td>Accepted (Codex, 20 findings)</td></tr>
+    <tr><td>D-92</td><td>The whole-branch review read by hand after the review agents hit the session limit: status says when the lobby forgot the machine, Done closes the setup window.</td><td>Accepted</td></tr>
   </table></div>
 </section>
 
@@ -540,7 +542,7 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
     <tr><td class="k">docs/DECISIONS.md · QUESTIONS.md · CHANGELOG.md</td><td>Decision log, questions with your answers, change log.</td></tr>
     <tr><td class="k">docs/research/01 to 10</td><td>Art lineage; plugin mechanics; free hosting and WebRTC; product history and safety; Omegle UI and 2009 web; plugin ecosystem and naming; retro chat-window design; auto-open window mechanics; Poolsuite color system and retro-modern principles; dot-screen video and the window shade.</td></tr>
     <tr><td class="k">design/</td><td>Mockup v2.3 working files, generator, and the font. v1 archived under design/v1-wait-together.</td></tr>
-    <tr><td class="k">plugin/</td><td>The plugin: eight async hooks, three commands, classifier, window opener, 35 tests. Validates strict.</td></tr>
+    <tr><td class="k">plugin/</td><td>The plugin: eight async hooks, three commands, classifier, window opener, 36 tests. Validates strict.</td></tr>
     <tr><td class="k">worker/</td><td>The lobby: Worker, Durable Object, pure core (43 tests), room and setup pages (14 unit tests), one wait through wrangler dev, 10 Playwright end-to-end cases.</td></tr>
     <tr><td class="k">docs/PROTOCOL.md · docs/PHASE0.md · scripts/probe-mac.sh</td><td>The contract; the Phase 0 measurements and checklist; the one-window probe for a Mac.</td></tr>
     <tr><td class="k">artifacts</td><td><a href="https://claude.ai/code/artifact/7f5e1d8a-4c07-46ab-9506-507936b4ff27">This plan</a> · <a href="https://claude.ai/code/artifact/447cf200-0465-4dcf-8ff0-984537a43877">Design canvas</a></td></tr>
