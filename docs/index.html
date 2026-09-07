@@ -513,6 +513,9 @@ footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--line);font-fa
     <tr><td>D-84</td><td>The rehearsal rides the next hook: the real open path, not a popup.</td><td>Proposed</td></tr>
     <tr><td>D-85, D-86</td><td>The lobby model as built, after two review rounds: session sets, ordered hooks, reconnect grace, deadline alarms, per-reporter flags, hydrated snapshots.</td><td>Accepted (built, tested)</td></tr>
     <tr><td>D-87</td><td>The room window lives in the plugin's own Chrome instance, launched hidden, with the autoplay flag; it quits when idle.</td><td>Accepted (measured on a Mac)</td></tr>
+    <tr><td>D-88</td><td>Copy review outcome: privacy promises scoped to what the plugin does, plain words on the setup page, the chatroom voice kept on purpose.</td><td>Accepted (Codex copy review)</td></tr>
+    <tr><td>D-89</td><td>Hook work that must outlive the hook (the stop POST, the opener, the idle check) runs detached, since Claude Code kills async hooks at teardown.</td><td>Accepted (internal review)</td></tr>
+    <tr><td>D-90</td><td>The browser reaper waits ten minutes after setup and twenty seconds after a test window, so the setup page and the test window survive a short turn; off ends both.</td><td>Accepted (verified live)</td></tr>
   </table></div>
 </section>
 
