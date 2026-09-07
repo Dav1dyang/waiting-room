@@ -16,9 +16,10 @@ claude plugin install waiting-room@waiting-room
 
 Or, in a session, `/plugin marketplace add Dav1dyang/waiting-room` then `/plugin install`.
 
-To run this checkout instead of an installed copy:
+To run this checkout instead of an installed copy, disable the installed one first, or every hook fires twice:
 
 ```
+claude plugin disable waiting-room@waiting-room
 claude --plugin-dir ./plugin
 ```
 

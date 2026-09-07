@@ -15,9 +15,23 @@ WR_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 case "${1:-}" in
   --open)
-    wr_open_url "${2:-}"
+    # deliver.sh --open URL [--keep] --owner NAME
+    # "--keep": a test window; leave the running instance (and the setup page in it) alone.
+    OPEN_URL="${2:-}"; shift 2
+    KEEP=""; OWNER=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --keep) KEEP=1 ;;
+        --owner) OWNER="${2:-}"; shift ;;
+      esac
+      shift
+    done
+    # Only the lock's owner touches the browser. An opener that slept through a stale takeover
+    # would otherwise quit the window the next owner just opened.
+    wr_lock_owned "$OWNER" || exit 0
+    if [ -n "$KEEP" ]; then WR_KEEP_INSTANCE=1 wr_open_url "$OPEN_URL"; else wr_open_url "$OPEN_URL"; fi
     sleep "$WR_LOCK_HOLD"
-    rmdir "$WR_LOCK_DIR" 2>/dev/null || true
+    wr_lock_release "$OWNER"
     exit 0
     ;;
   --idle-check)
@@ -71,34 +85,19 @@ process.stdin.on("end", () => {
   } catch (e) {}
 });' 2>/dev/null || true)"
 [ -n "$URL" ] || exit 0
+KEEP=""
+case "$REPLY" in *'"rehearsal":true'*) KEEP="--keep" ;; esac
 # A room lives on our lobby at /room. Anything else is a broken lobby, and we do not open it.
 wr_url_ok "$URL" /room || exit 0
 
-# Seconds since a path was last touched. If we cannot tell, say 0: an age we do not know
-# is not a reason to take someone else's lock away.
-wr_age() {
-  node -e '
-const fs = require("node:fs");
-try {
-  const s = fs.statSync(process.argv[1]);
-  process.stdout.write(String(Math.floor((Date.now() - s.mtimeMs) / 1000)));
-} catch (e) { process.stdout.write("0"); }' "$1" 2>/dev/null || printf '0'
-}
-
-# Several hooks can fire in the same second, and each one gets its own process.
-# mkdir is atomic, so exactly one of them opens a window.
-if [ -d "$WR_LOCK_DIR" ]; then
-  AGE="$(wr_age "$WR_LOCK_DIR")"
-  case "$AGE" in
-    ''|*[!0-9]*) AGE=0 ;;
-  esac
-  # Older than half a minute means the process holding it died. Take it back.
-  if [ "$AGE" -ge "$WR_LOCK_STALE" ]; then rmdir "$WR_LOCK_DIR" 2>/dev/null || true; fi
-fi
-if mkdir "$WR_LOCK_DIR" 2>/dev/null; then
+# Several hooks can fire in the same second, and each one gets its own process. The lock is
+# atomic, so exactly one of them opens a window. A few retries cover the reaper, which holds
+# the lock for a moment while it quits an idle browser.
+OWNER="open.$$.$RANDOM"
+if wr_lock_take "$OWNER" 5; then
   # The opener outlives this hook and releases the lock a few seconds after the open, so the
   # hooks right behind this one stay quiet. Detached, so a teardown cannot leave the lock stuck.
-  wr_detach bash "$WR_HERE/deliver.sh" --open "$URL"
+  wr_detach bash "$WR_HERE/deliver.sh" --open "$URL" $KEEP --owner "$OWNER"
 fi
 
 exit 0

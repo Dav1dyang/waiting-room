@@ -204,7 +204,7 @@ export class Lobby {
       t.rehearse = false;
       t.lastRehearsalAt = now;
       const ticket = this.makeTicket(token, now, true, null);
-      return this.reply({ open: origin + '/room?t=' + ticket });
+      return this.reply({ open: origin + '/room?t=' + ticket, rehearsal: true });
     }
     const task = t.task;
     const pastT = task && now - task.startedAt >= this.cfg.T;
@@ -403,7 +403,9 @@ export class Lobby {
     }
     const task = t.task;
     const valid = task && task.id === tk.taskId && task.phase !== 'done' && !task.optedOut && t.blockedUntil <= now;
-    if (!valid || this.live(t)) return this.fx.push({ type: 'attach', ok: false });
+    // One window per token: a different ticket is refused while a window exists, connected or
+    // in its reconnect grace; the same ticket may always come back.
+    if (!valid || this.live(t) || (t.win && t.win.ticket !== ticket)) return this.fx.push({ type: 'attach', ok: false });
     t.win = { connected: true, since: now, ticket, conn, bye: null, lastOthers: null, disconnectedAt: 0 };
     tk.exp = now + this.cfg.ROOM_MAX + this.cfg.TICKET_TTL;
     task.everConnected = true;
