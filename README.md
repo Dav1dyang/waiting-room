@@ -2,12 +2,20 @@
 
 A Claude Code plugin. While your Claude works for more than 15 seconds, a small window opens behind your terminal and puts you on an audio call with a stranger whose Claude is also working. It closes itself with a ten-second countdown when either Claude finishes. Every wait, a different stranger. The stranger never learns anything about your task.
 
-Status, 2026-09-06: the alpha is built, tested, and the lobby is live on workers.dev. Invite only.
+Status, 2026-09-07: the alpha is built, tested, and the lobby is live on workers.dev. Invite only. To run the checkout instead of an installed copy, see `plugin/README.md`.
 
-## Try it
+## Install
+
+You need a Mac with Google Chrome, Claude Code, this repo (it is private: accept the collaborator invite and sign in with `gh auth login` on that Mac), and an invite code from whoever runs the lobby.
 
 ```
-claude --plugin-dir ./plugin          # or install it, see plugin/README.md
+claude plugin marketplace add Dav1dyang/waiting-room
+claude plugin install waiting-room@waiting-room
+```
+
+Then start a new `claude` session anywhere and turn it on:
+
+```
 /waiting-room:on <invite code>        # prints the rules, opens the setup page once
 ```
 
