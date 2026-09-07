@@ -129,6 +129,10 @@ wr_detach() {
 # The tests use that to capture the URL instead of launching a browser.
 wr_open_url() {
   local url="$1"
+  # An instance that has ever been in front (the setup page opens that way) brings every later
+  # window to the front too. So an ordinary window always gets a fresh, hidden launch: quit what
+  # is running first. A test window keeps the instance, and the setup page beside it (D-93).
+  [ -n "${WR_KEEP_INSTANCE:-}" ] || wr_quit_chrome_wait
   if [ -n "${WAITING_ROOM_OPEN_CMD:-}" ]; then
     sh -c "$WAITING_ROOM_OPEN_CMD \"\$1\"" wr "$url" >/dev/null 2>&1 || true
     return 0
@@ -167,6 +171,20 @@ wr_quit_chrome() {
   if pgrep -f -- "--user-data-dir=$WR_CHROME_DIR" >/dev/null 2>&1; then
     pkill -f -- "--user-data-dir=$WR_CHROME_DIR" >/dev/null 2>&1 || true
   fi
+  return 0
+}
+
+# Quit, then wait (up to three seconds) until the profile is free, so the next launch is a new
+# instance and not a window handed to the dying one.
+wr_quit_chrome_wait() {
+  local i
+  if [ -n "${WAITING_ROOM_QUIT_CMD:-}" ]; then wr_quit_chrome; return 0; fi
+  pgrep -f -- "--user-data-dir=$WR_CHROME_DIR" >/dev/null 2>&1 || return 0
+  wr_quit_chrome
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+    pgrep -f -- "--user-data-dir=$WR_CHROME_DIR" >/dev/null 2>&1 || return 0
+    sleep 0.2
+  done
   return 0
 }
 

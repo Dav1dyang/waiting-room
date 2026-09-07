@@ -11,6 +11,10 @@ import * as sound from './audio.js';
 import { Peer, stopStream } from './rtc.js';
 
 const SIZES = { shaded: [380, 100], room: [380, 300], video: [380, 400] };
+// The desk showing above and below the panel (style.css --edge-top + --edge-bottom) and the
+// panel's 1px shadow. Chrome's own title bar is measured, 32px on a Mac when it cannot be.
+const EDGE_Y = 16 + 1;
+const CHROME_BAR_FALLBACK = 32;
 const TINT_DEFAULT = '#91CECF';
 const LINGER_MS = 3000;   // the room stays up a moment after the stranger leaves, then it rolls up
 const CLOSE_MS = 1000;    // how long the last line stays before the window closes itself
@@ -86,8 +90,17 @@ function stageVisible() {
   return state.localVideoOn || state.peerVideoOn;
 }
 
+function chromeBar() {
+  const d = window.outerHeight - window.innerHeight;
+  return d > 0 && d < 120 ? d : CHROME_BAR_FALLBACK;
+}
+
+/** Shaded, the window fits the panel: one count line or two, never a cropped frame (D-94). */
 function sizeFor() {
-  if (state.collapsed) return SIZES.shaded;
+  if (state.collapsed) {
+    const need = Math.ceil(el.win.getBoundingClientRect().height) + EDGE_Y + chromeBar();
+    return [SIZES.shaded[0], Math.max(SIZES.shaded[1], need)];
+  }
   return stageVisible() ? SIZES.video : SIZES.room;
 }
 
