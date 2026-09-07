@@ -1,8 +1,0 @@
-{
-  "name": "waiting-room",
-  "displayName": "Waiting Room",
-  "description": "While your Claude works, an audio call with a stranger whose Claude is also working. A small room window opens when someone is matched and closes when either Claude finishes.",
-  "version": "0.2.0",
-  "author": { "name": "David Yang" },
-  "keywords": ["hooks", "webrtc", "fun", "social"]
-}

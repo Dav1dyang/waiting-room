@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Waiting Room Setup</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="setup">
+
+<div class="win" id="win">
+
+  <div class="tb">
+    <div class="stripes"></div>
+    <span class="door"><i data-icon="door"></i></span>
+    <span class="title" id="title">Waiting Room Setup</span>
+    <span class="box shadebox"><i data-icon="shade"></i></span>
+    <span class="box zoom"></span>
+  </div>
+
+  <div class="setup-body" id="setupBody">
+    <p class="intro" id="intro"></p>
+
+    <div class="row" id="rowMic">
+      <i class="cb" id="cbMic"></i>
+      <div class="grow"><b id="micHead"></b> <span class="sub" id="micSub"></span></div>
+      <button class="btn" id="micBtn" type="button"></button>
+    </div>
+
+    <div class="row" id="rowNotif">
+      <i class="cb" id="cbNotif"></i>
+      <div class="grow"><b id="notifHead"></b> <span class="sub" id="notifSub"></span></div>
+      <button class="btn" id="notifBtn" type="button"></button>
+    </div>
+
+    <div class="row" id="rowSound">
+      <i class="cb" id="cbSound"></i>
+      <div class="grow"><b id="soundHead"></b> <span class="sub" id="soundSub"></span></div>
+      <button class="btn" id="soundBtn" type="button"></button>
+    </div>
+
+    <div class="row" id="rowRehearse">
+      <i class="cb" id="cbRehearse"></i>
+      <div class="grow"><b id="rehearseHead"></b> <span class="sub" id="rehearseSub"></span></div>
+      <button class="btn cyan def" id="rehearseBtn" type="button"></button>
+    </div>
+
+    <div class="row" id="rowTint">
+      <b style="white-space:nowrap" id="tintHead"></b>
+      <div class="grow" id="tints"></div>
+    </div>
+
+    <div class="rules" id="rules"></div>
+
+    <div class="foot">
+      <i data-icon="person"></i>
+      <span class="dot"></span>
+      <span id="countText"></span>
+      <button class="btn" id="doneBtn" type="button" style="margin-left:auto"></button>
+    </div>
+    <div class="foot" id="statusLine"></div>
+  </div>
+
+</div>
+
+<script type="module" src="setup.js"></script>
+</body>
+</html>

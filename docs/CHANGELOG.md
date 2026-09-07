@@ -2,6 +2,21 @@
 
 Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 
+## 2026-09-06 (v0.6, the alpha built)
+
+- Plan v0.6 published; v0.5 archived at `docs/archive/plan-v0.5.html`. Mockup stays v2.3.
+- Built on `feat/alpha`, contract first: docs/PROTOCOL.md, then the pure lobby core (43 tests), then three parallel builders: the Worker and Durable Object (one whole wait through wrangler dev), the room and setup pages (14 unit tests, 10 Playwright end-to-end cases with two Chrome contexts and fake media), and the plugin (35 tests, `claude plugin validate --strict` clean for plugin and marketplace).
+- Two review rounds on the core: Codex (12 findings) and the internal code review (15 findings), all applied; D-85 and D-86 record the model as built.
+- Phase 0 browser tests on David's Mac (docs/PHASE0.md): focus, self-close, resize floor, rehearsal, audio with no click. Finding: a window opened into the everyday Chrome takes focus within half a second; the plugin now opens its own Chrome instance, launched hidden, with the autoplay flag, and quits it when idle (D-87). `AudioContext.resume()` capped at 400 ms.
+- Deployed to workers.dev on the free plan with the invite code as a secret; real Claude Code hooks (`claude -p`) opened a room URL at 26 s against the live lobby; the ten end-to-end cases pass against it too.
+- Opt-in hook log (`WAITING_ROOM_LOG`) for the Phase 0 week; `WAITING_ROOM_DIR` for tests.
+- Root README rewritten for the built repo; plugin and worker READMEs by the builders.
+- The internal code review of the whole branch was cut short by the session limit; its one finished verifier confirmed that background hook work can die at session teardown, fixed by a detached delivery step (D-89).
+- Codex copy review (43 notes): the clarity and privacy-scope fixes applied across the window, the setup page, the terminal, the commands, and the READMEs; the chatroom voice kept on purpose (D-88). The internal code review of the whole branch ran after the build.
+- Found on the final walk-through: a short first turn after `on` made the lobby tell the plugin to quit its Chrome, setup page and all. The lobby now holds off for ten minutes after register and twenty seconds after a test window (D-90); `off` ends both. New vars SETUP_GRACE and REHEARSAL_GRACE, one core test, redeployed and checked live. The wrangler-dev test and the hang-up end-to-end case had loose expectations; tightened.
+- Whole-branch review read by hand after the review agents hit the session limit (D-92): status says when the lobby forgot the machine, Done closes the setup window, the global invite cap noted. Tests: 59 worker, 10 end-to-end, 36 plugin.
+- Third review round (Codex, 20 findings on the Worker wrapper, plugin scripts, and WebRTC code): fourteen applied, six deferred to Phase 2 with reasons (D-91). Probe only on request, frame and invite-guess limits, bounded bodies, listen-only fallback, stricter URL checks and file modes in the plugin. Tests: 59 worker, 10 end-to-end, 35 plugin.
+
 ## 2026-09-06 (v0.5, fourth round of answers)
 
 - Plan v0.5 published to the plan artifact; mockup v2.3 to the design canvas (same URLs). v0.4 archived at `docs/archive/plan-v0.4.html`.
@@ -11,6 +26,8 @@ Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 - Mockup v2.3: Knock artboard removed (ten artboards), Main shows the automatic entry, setup and terminal copy updated.
 - D-83: arm threshold 15 s (was 30 s), David's change; every "30 s" in the plan, the mockup, and the scripts follows. D-84: the rehearsal rides the next hook instead of a popup.
 - Build started: repo initialised on `main` with the docs and design baseline; the alpha is built on `feat/alpha`.
+- Lobby core built as a pure state machine (worker/src/lobby-core.js) with docs/PROTOCOL.md as the contract, 24 node:test cases, a mock lobby, and eleven hook fixtures. D-85 logs the model as built.
+- Codex review of the core (12 findings) applied: tickets bound to their task and dropped at task end; signal frames scoped to a room id; connection ids on socket events so a late close from an old socket cannot touch a new window; token names checked with own-property lookups (no "constructor" or "__proto__" surprises); a pause can no longer open a window before T; rehearsal waits while a real window is live; the open retry only applies when no window ever connected; quiet-room timing tracks speech start and stop; peer cooldown is per pair; a task restarted during the goodbye keeps its window; the count leaves out paused and blocked people. 33 tests pass.
 - Memos 09 and 10 final (agents finished); memo 09 gained the exemplar section.
 
 ## 2026-09-06 (v0.4, third round of answers)

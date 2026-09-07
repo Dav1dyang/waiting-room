@@ -1,0 +1,45 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "waiting-room",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+
+  // The room window, the setup page and copy.js. html_handling "none" keeps /room and
+  // /setup in the Worker so they get the microphone and nosniff headers; without it the
+  // asset server would answer /room with /room.html before the Worker ever ran.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "html_handling": "none"
+  },
+
+  // One lobby for everybody. SQLite-backed, which is what the free plan allows.
+  "durable_objects": {
+    "bindings": [{ "name": "LOBBY", "class_name": "LobbyObject" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["LobbyObject"] }],
+
+  // Every number from docs/PROTOCOL.md section 2. Milliseconds unless said otherwise.
+  // Change one here and redeploy; the Durable Object reads them on every cold start.
+  "vars": {
+    "T": 15000,              // arm threshold, a task shorter than this never makes a window
+    "F": 20000,              // freshness, pairing needs a hook this recent
+    "N": 90000,              // silence, no hook for this long means Claude went quiet
+    "G": 90000,              // grace after a turn that ended with a question
+    "P": 600000,             // patience while Claude waits on you
+    "Q": 45000,              // quiet room, no speech from either side for this long
+    "COUNTDOWN": 5,          // seconds of goodbye, not milliseconds
+    "ROOM_MAX": 1800000,     // longest room
+    "PEER_COOLDOWN": 60000,  // do not re-pair the same two people inside this window
+    "OPEN_RETRY": 30000,     // one more "open" if the first window never connected
+    "TICKET_TTL": 600000,    // a room ticket must be used inside this window
+    "MAX_OPENS": 2,          // opens per task, counting the retry
+    "RECONNECT_GRACE": 15000,// a dropped window may come back inside this window
+    "SETUP_GRACE": 600000,   // after register the setup page may be open: no quit hint
+    "REHEARSAL_GRACE": 20000,// a test window is still closing itself: no quit hint
+    "RELAY_BUDGET_GB": 500,  // stop minting TURN credentials past this monthly estimate
+  }
+}

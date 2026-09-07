@@ -1,0 +1,9 @@
+{
+  "session_id": "0f3c1c5e-7b0e-4c9a-9d1a-1234567890ab",
+  "transcript_path": "/Users/x/.claude/projects/p/0f3c.jsonl",
+  "cwd": "/Users/x/proj",
+  "permission_mode": "default",
+  "hook_event_name": "StopFailure",
+  "error": "rate_limit",
+  "error_message": "429"
+}
