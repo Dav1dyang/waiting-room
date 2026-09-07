@@ -1,5 +1,5 @@
 ---
-description: Turn waiting-room off for this machine and close any open window.
+description: Turn waiting-room off and close its window.
 disable-model-invocation: true
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/toggle.sh *)
 ---
