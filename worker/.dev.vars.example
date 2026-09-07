@@ -1,0 +1,10 @@
+# Copy to .dev.vars for local development. .dev.vars is git-ignored; never commit real values.
+# In production these are secrets: npx wrangler secret put INVITES
+#
+# Comma separated invite codes. Empty means anyone who finds the lobby may register.
+INVITES=DUCK
+#
+# Cloudflare Realtime TURN, both or neither. Without them every room is STUN only,
+# which is what the alpha runs on. See src/turn.js.
+TURN_KEY_ID=
+TURN_API_TOKEN=
