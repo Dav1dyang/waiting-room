@@ -17,6 +17,9 @@ export const DEFAULTS = {
   TICKET_TTL: 600_000, MAX_OPENS: 2, RECONNECT_GRACE: 15_000,
   REPORT_BLOCK: 3, BLOCK_MS: 86_400_000, PROBES_KEPT: 20, PROBE_BYTES: 2048,
   TOKEN_TTL: 30 * 86_400_000,
+  // The lobby is one storage value (2 MB). A ceiling on tokens, and when it is reached the
+  // tokens that registered and never sent a hook are swept first: those are the flood, never a person.
+  MAX_TOKENS: 3000, UNHOOKED_TTL: 3_600_000,
   SETUP_GRACE: 600_000, REHEARSAL_GRACE: 20_000,
   invites: [],
   iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }],
@@ -45,6 +48,7 @@ export function hydrate(state) {
     t.registeredAt = t.registeredAt || 0;
     t.rehearse = !!t.rehearse;
     t.lastRegisterAt = t.lastRegisterAt || 0; t.lastRehearsalAt = t.lastRehearsalAt || 0;
+    t.hooked = t.hooked !== undefined ? !!t.hooked : true; t.ipHash = t.ipHash || null;
     if (t.task) {
       const k = t.task;
       k.everConnected = !!k.everConnected; k.optedOut = !!k.optedOut; k.opens = k.opens || 0; k.lastOpenAt = k.lastOpenAt || 0;
@@ -112,12 +116,17 @@ export class Lobby {
   }
 
   // ---------- registration ----------
-  register({ token, invite, now, origin = '' }) {
+  register({ token, invite, now, origin = '', ipHash = null }) {
     if (typeof token !== 'string' || !TOKEN_RE.test(token)) return this.reply({ ok: false, error: 'token' });
     const known = this.tok(token);
     const open = this.cfg.invites.length === 0;
     if (!known && !open && !this.cfg.invites.includes(invite)) return this.reply({ ok: false, error: 'invite' });
+    if (!known && Object.keys(this.s.tokens).length >= this.cfg.MAX_TOKENS) {
+      this.sweepUnhooked(now);
+      if (Object.keys(this.s.tokens).length >= this.cfg.MAX_TOKENS) return this.reply({ ok: false, error: 'busy' });
+    }
     const t = known || this.newToken(now);
+    if (typeof ipHash === 'string' && ipHash) t.ipHash = ipHash.slice(0, 32);
     t.enabled = true;
     t.invite = typeof invite === 'string' && invite ? invite.slice(0, 64) : t.invite || null;
     t.lastHookAt = now;
@@ -127,8 +136,15 @@ export class Lobby {
   }
 
   newToken(now) {
-    return { enabled: false, invite: null, registeredAt: now, lastHookAt: now, task: null, win: null, room: null,
+    return { enabled: false, invite: null, registeredAt: now, lastHookAt: now, hooked: false, ipHash: null, task: null, win: null, room: null,
       lastPeers: {}, rehearse: false, reports: {}, blockedUntil: 0, probes: [], lastRegisterAt: 0, lastRehearsalAt: 0 };
+  }
+
+  /** When the lobby is full, the tokens that registered and never sent a hook go first. */
+  sweepUnhooked(now) {
+    for (const [token, t] of Object.entries(this.s.tokens)) {
+      if (!t.hooked && !t.win && !t.room && now - t.registeredAt > this.cfg.UNHOOKED_TTL) delete this.s.tokens[token];
+    }
   }
 
   off({ token, now }) {
@@ -158,6 +174,7 @@ export class Lobby {
     const t = this.tok(token);
     if (!kind || !t || !t.enabled) return this.reply({});
     t.lastHookAt = now;
+    t.hooked = true;
     if (t.blockedUntil > now) {
       if (t.task && t.task.phase !== 'done') this.endTask(token, now, 'done', now);
       return this.reply({});
@@ -488,7 +505,9 @@ export class Lobby {
     if (target) {
       const p = this.tok(target);
       for (const [who, at] of Object.entries(p.reports)) if (now - at >= this.cfg.BLOCK_MS) delete p.reports[who];
-      p.reports[token] = now;
+      // Three reports must come from three homes, not three tokens from one (the lobby is open).
+      const reporter = this.tok(token);
+      p.reports[(reporter && reporter.ipHash) || token] = now;
       if (Object.keys(p.reports).length >= this.cfg.REPORT_BLOCK) p.blockedUntil = now + this.cfg.BLOCK_MS;
     }
     if (room) return this.leaveRoom(token, now, 'report');

@@ -28,7 +28,7 @@ say() {
     n_others)    printf '%s\n' "${2} others are waiting for their Claude." ;;
     from_now_on) printf '%s\n' "When Claude works for more than 15 seconds, a small window opens behind your terminal." ;;
     bad_invite)  printf '%s\n' "That invite code did not work." ;;
-    busy)        printf '%s\n' "Too many wrong codes for now. Wait ten minutes, then try again." ;;
+    busy)        printf '%s\n' "waiting-room is busy right now. Try again in a while." ;;
     relink)      printf '%s\n' "waiting-room does not know this machine any more. Run /waiting-room:on again." ;;
     refused)     printf '%s\n' "Could not turn waiting-room on. Ask whoever gave you the invite code." ;;
     unreachable) printf '%s\n' "Cannot reach waiting-room right now. Try again in a minute." ;;

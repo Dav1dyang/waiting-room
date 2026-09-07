@@ -45,6 +45,11 @@ export class LobbyObject extends DurableObject {
     this.regFailsAll = { n: 0, until: 0 };
     this.regOk = new Map();
     ctx.blockConcurrencyWhile(async () => {
+      this.salt = await ctx.storage.get('salt');
+      if (!this.salt) {
+        this.salt = crypto.randomUUID();
+        await ctx.storage.put('salt', this.salt);
+      }
       const saved = await ctx.storage.get('state');
       this.lobby = new Lobby(cfgFrom(env), saved || null);
       // Ping and pong never wake this object up.
@@ -58,7 +63,7 @@ export class LobbyObject extends DurableObject {
     const url = new URL(request.url);
     const now = Date.now();
     const origin = request.headers.get('x-wr-origin') || url.origin;
-    const ip = request.headers.get('x-wr-ip') || '';
+    const ip = ipKey(request.headers.get('x-wr-ip') || '');
 
     if (url.pathname === '/ws') return this.openSocket(url, now);
 
@@ -79,7 +84,9 @@ export class LobbyObject extends DurableObject {
     const token = typeof body.token === 'string' ? body.token : '';
     // A hook from a token nobody registered changes nothing and never touches the limiter.
     if (kind === 'hook' && (!this.lobby.tok(token) || !this.allowHook(token, now))) return json({});
-    if (kind === 'register' && !this.allowRegister(ip, now)) return json({ ok: false, error: 'busy' }, 429);
+    // A token the lobby already knows is a person turning it on again, not a new registration.
+    const known = kind === 'register' && !!this.lobby.tok(token);
+    if (kind === 'register' && !known && !this.allowRegister(ip, now)) return json({ ok: false, error: 'busy' }, 429);
     // Only the fields the core reads are copied across, so a body can never set its own event kind.
     const ev = { kind, token, now, origin };
     if (kind === 'register') ev.invite = typeof body.invite === 'string' ? body.invite : '';
@@ -91,9 +98,11 @@ export class LobbyObject extends DurableObject {
       ev.session = typeof body.session === 'string' ? body.session.slice(0, 32) : '';
       if (Number.isFinite(body.ts)) ev.ts = body.ts;
     }
+    if (kind === 'register') ev.ipHash = await this.hashAddress(ip);
     const out = await this.run(ev);
     if (kind === 'register' && out && out.error === 'invite') this.noteRegisterFailure(ip, now);
-    if (kind === 'register' && out && out.ok) this.noteRegisterOk(ip, now);
+    if (kind === 'register' && out && out.ok && !known) this.noteRegisterOk(ip, now);
+    if (kind === 'register' && out && out.error === 'busy') return json(out, 429);
     return json(out);
   }
 
@@ -119,6 +128,14 @@ export class LobbyObject extends DurableObject {
     const ok = this.regOk.get(ip);
     if (ok && ok.until > now && ok.n >= REG_PER_IP) return false;
     return true;
+  }
+
+  /** A salted hash of the address, kept on the token so three reports from one home count once. */
+  async hashAddress(ip) {
+    if (!ip) return null;
+    const bytes = new TextEncoder().encode(this.salt + '|' + ip);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return [...new Uint8Array(digest)].slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
   noteRegisterOk(ip, now) {
@@ -327,6 +344,19 @@ function whoIs(ctx, ws) {
     att = null;
   }
   return att && typeof att.token === 'string' && att.token && att.conn ? att : null;
+}
+
+/**
+ * The address as the caps see it. An IPv6 host has a whole /64 to itself, so the key is the
+ * first four groups; an IPv4 address is itself.
+ */
+function ipKey(ip) {
+  if (!ip || !ip.includes(':')) return ip;
+  const [head, tail = ''] = ip.split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail ? tail.split(':') : [];
+  const groups = [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right];
+  return groups.slice(0, 4).map((g) => g.toLowerCase().replace(/^0+(?=.)/, '') || '0').join(':') + '::/64';
 }
 
 function dropSocket(ws) {

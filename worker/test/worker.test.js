@@ -209,6 +209,7 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
     else assert.equal(r.body.ok, true);
   }
   assert.equal(cappedAt, 30, 'thirty registrations, then 429');
+  assert.equal((await post('/api/register', { token: 'floodtoken00', invite: 'DUCK' }, flood)).body.ok, true, 'a token the lobby knows may turn itself on again');
   assert.equal((await post('/api/register', { token: 'tokenaaaa1', invite: 'DUCK' })).body.ok, true, 'another address is unaffected');
 
   // Invite guessing: ten wrong codes, then registration answers 429 for a while.

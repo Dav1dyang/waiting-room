@@ -663,3 +663,43 @@ test('a ticket that never connected cannot take over a window that is only dropp
   const back = wsOpen(l, ticketOf(second), 54 * S).find((f) => f.type === 'attach');
   assert.equal(back.ok, true, 'the same ticket comes back');
 });
+
+test('a full lobby sweeps register-only tokens first, then says busy', () => {
+  const l = mk({ MAX_TOKENS: 3, UNHOOKED_TTL: 60 * S });
+  reg(l, 'tokenaaaa1', 0);
+  hook(l, 'tokenaaaa1', 'started', 1 * S); // a person: hooked
+  reg(l, 'floodaaaa1', 2 * S);
+  reg(l, 'floodaaaa2', 3 * S);
+  assert.deepEqual(reg(l, 'floodaaaa3', 4 * S), { ok: false, error: 'busy' }, 'full, and nothing old enough to sweep');
+  assert.equal(reg(l, 'tokenaaaa1', 5 * S).ok, true, 'a known token always re-registers');
+  const late = reg(l, 'floodaaaa3', 70 * S);
+  assert.equal(late.ok, true, 'an hour on, the register-only tokens are swept and there is room');
+  assert.ok(l.tok('tokenaaaa1'), 'the person stays');
+  assert.ok(!l.tok('floodaaaa1') && !l.tok('floodaaaa2'), 'the flood is gone');
+});
+
+test('three reports from one address count as one; three homes block', () => {
+  const l = mk({ PEER_COOLDOWN: 0 });
+  const home = (token, ipHash, now) => l.apply({ kind: 'register', token, invite: 'DUCK', now, origin: ORIGIN, ipHash }).find((f) => f.type === 'reply').body;
+  // One room per reporter: both come up, the reporter reports, both stop, the sweep runs.
+  const meetAndReport = (tk, now) => {
+    bringUp(l, 'victimaaa1', now);
+    bringUp(l, tk, now + S);
+    l.apply({ kind: 'ws_msg', token: tk, msg: { type: 'report' }, now: now + 20 * S });
+    hook(l, 'victimaaa1', 'stopped', now + 21 * S);
+    hook(l, tk, 'stopped', now + 21 * S);
+    tick(l, now + 30 * S);
+  };
+  home('victimaaa1', 'hash-v', 0);
+  for (const [i, tk] of ['griefer001', 'griefer002', 'griefer003'].entries()) {
+    home(tk, 'hash-g', 0);
+    meetAndReport(tk, (i + 1) * 100 * S);
+  }
+  assert.equal(l.tok('victimaaa1').blockedUntil, 0, 'one home reporting three times is one report');
+  assert.deepEqual(Object.keys(l.tok('victimaaa1').reports), ['hash-g']);
+  for (const [i, tk] of ['neighbor01', 'neighbor02'].entries()) {
+    home(tk, 'hash-n' + i, 0);
+    meetAndReport(tk, (i + 10) * 100 * S);
+  }
+  assert.ok(l.tok('victimaaa1').blockedUntil > 0, 'three homes block');
+});
