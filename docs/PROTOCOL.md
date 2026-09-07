@@ -116,7 +116,7 @@ Window to server:
 | type | fields | meaning |
 | --- | --- | --- |
 | `signal` | `room`, `data` | relay to the peer; the lobby drops frames for a room you are not in |
-| `speech` | `active: bool` | edge-triggered from the local meter: true when speech starts, false about 1.5 s after it stops; at most one frame per 2 s |
+| `speech` | `active: bool` | edge-triggered from the local meter: true when speech starts, false about 1.5 s after it stops; at most one frame per 2 s; while speech continues, `true` again every 10 s, since the lobby forgets a flag it has not heard of in Q |
 | `video` | `on: bool` | toggled video |
 | `hangup` | | leave; out for this task |
 | `report` | | flag the peer (one flag per reporter per day) and leave; with no room, flag the last peer of the past minute and stay |

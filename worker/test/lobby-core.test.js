@@ -229,8 +229,8 @@ test('a quiet room ends softly and the pair is not rematched right away', () => 
   fx = tick(l, now + 56 * S);
   assert.equal(sends(fx).length, 0, 'silence started at 12 s, so 56 s is not yet quiet');
   fx = tick(l, now + 58 * S);
-  assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['line:quiet_room', 'state:shaded', 'line:requeued', 'others:1']);
-  assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['line:quiet_room', 'state:shaded', 'line:requeued', 'others:1']);
+  assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['line:quiet_room', 'state:shaded', 'others:1']);
+  assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['line:quiet_room', 'state:shaded', 'others:1']);
   assert.equal(l.count(), 2);
   hook(l, 'tokenaaaa1', 'tick', now + 57 * S);
   hook(l, 'tokenbbbb2', 'tick', now + 57 * S);

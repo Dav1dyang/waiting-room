@@ -73,7 +73,7 @@ export function makePeakHold({ holdMs = 800, decayMs = 100 } = {}) {
  * Returns true or false on a change worth sending, null otherwise.
  * At most one message every minGapMs, which is the protocol's rule for `speech`.
  */
-export function makeSpeechGate({ on = 0.10, off = 0.05, minGapMs = 2000, releaseMs = 400 } = {}) {
+export function makeSpeechGate({ on = 0.10, off = 0.05, minGapMs = 2000, releaseMs = 400, repeatMs = 10000 } = {}) {
   let active = false;
   let sent = false;
   let lastSentAt = -Infinity;
@@ -86,7 +86,15 @@ export function makeSpeechGate({ on = 0.10, off = 0.05, minGapMs = 2000, release
       if (!quietSince) quietSince = now;
       if (now - quietSince >= releaseMs) active = false;
     }
-    if (active === sent) return null;
+    if (active === sent) {
+      // Still talking: say so again now and then. The lobby drops a flag it has not heard of
+      // in Q, so one long monologue with no pause would otherwise read as a quiet room.
+      if (active && now - lastSentAt >= repeatMs) {
+        lastSentAt = now;
+        return true;
+      }
+      return null;
+    }
     if (now - lastSentAt < minGapMs) return null;
     sent = active;
     lastSentAt = now;

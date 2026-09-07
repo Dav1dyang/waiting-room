@@ -353,8 +353,9 @@ export class Lobby {
     for (const tk of [a, b]) {
       const t = this.tok(tk);
       if (!t.win) continue;
+      // The line for these two already ends "Back in the queue.", so no second line for that.
       this.line(tk, key);
-      this.requeue(tk);
+      this.send(tk, { type: 'state', state: 'shaded' });
     }
   }
 
