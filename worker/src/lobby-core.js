@@ -17,6 +17,7 @@ export const DEFAULTS = {
   TICKET_TTL: 600_000, MAX_OPENS: 2, RECONNECT_GRACE: 15_000,
   REPORT_BLOCK: 3, BLOCK_MS: 86_400_000, PROBES_KEPT: 20, PROBE_BYTES: 2048,
   TOKEN_TTL: 30 * 86_400_000,
+  SETUP_GRACE: 600_000, REHEARSAL_GRACE: 20_000,
   invites: [],
   iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }],
 };
@@ -43,6 +44,7 @@ export function hydrate(state) {
     t.lastHookAt = t.lastHookAt || 0;
     t.registeredAt = t.registeredAt || 0;
     t.rehearse = !!t.rehearse;
+    t.lastRegisterAt = t.lastRegisterAt || 0; t.lastRehearsalAt = t.lastRehearsalAt || 0;
     if (t.task) {
       const k = t.task;
       k.everConnected = !!k.everConnected; k.optedOut = !!k.optedOut; k.opens = k.opens || 0; k.lastOpenAt = k.lastOpenAt || 0;
@@ -115,13 +117,14 @@ export class Lobby {
     t.enabled = true;
     t.invite = typeof invite === 'string' && invite ? invite.slice(0, 64) : t.invite || null;
     t.lastHookAt = now;
+    t.lastRegisterAt = now;
     this.s.tokens[token] = t;
     this.reply({ ok: true, count: this.othersFor(token), setup: origin + '/setup?t=' + token });
   }
 
   newToken(now) {
     return { enabled: false, invite: null, registeredAt: now, lastHookAt: now, task: null, win: null, room: null,
-      lastPeers: {}, rehearse: false, reports: {}, blockedUntil: 0, probes: [] };
+      lastPeers: {}, rehearse: false, reports: {}, blockedUntil: 0, probes: [], lastRegisterAt: 0, lastRehearsalAt: 0 };
   }
 
   off({ token, now }) {
@@ -129,6 +132,7 @@ export class Lobby {
     if (!t) return this.reply({ ok: true });
     t.enabled = false;
     t.rehearse = false;
+    t.lastRegisterAt = 0; t.lastRehearsalAt = 0; // off means the browser may go now
     if (t.room) this.leaveRoom(token, now, 'off');
     else if (this.live(t)) this.closeWindow(token, 'off');
     t.win = null;
@@ -194,6 +198,7 @@ export class Lobby {
     const hasWindow = !!t.win;
     if (t.rehearse && !hasWindow) {
       t.rehearse = false;
+      t.lastRehearsalAt = now;
       const ticket = this.makeTicket(token, now, true, null);
       return this.reply({ open: origin + '/room?t=' + ticket });
     }
@@ -212,11 +217,17 @@ export class Lobby {
     this.reply(stopping && !this.hasWindow(token, now) ? { quit: true } : {});
   }
 
-  /** A window exists, is reconnecting, or was just told to open and has not connected yet. */
+  /**
+   * Something is, or may be, on screen in the plugin's browser: a window, one reconnecting, one
+   * just told to open, a test window from the last few seconds, or the setup page right after
+   * registration (the browser also hosts that page, so the reaper must leave it alone, D-87).
+   */
   hasWindow(token, now) {
     const t = this.tok(token);
     if (!t) return false;
     if (t.win) return true;
+    if (now - (t.lastRegisterAt || 0) < this.cfg.SETUP_GRACE) return true;
+    if (now - (t.lastRehearsalAt || 0) < this.cfg.REHEARSAL_GRACE) return true;
     const task = t.task;
     return !!(task && task.phase !== 'done' && task.opens > 0 && !task.everConnected && now - task.lastOpenAt < this.cfg.OPEN_RETRY);
   }

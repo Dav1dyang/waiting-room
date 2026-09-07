@@ -12,7 +12,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(here, '..', 'public');
 const PORT = Number(process.env.PORT || 8788);
 const cfg = {};
-for (const k of ['T', 'F', 'N', 'G', 'P', 'Q', 'ROOM_MAX', 'PEER_COOLDOWN', 'OPEN_RETRY', 'COUNTDOWN', 'RECONNECT_GRACE']) {
+for (const k of ['T', 'F', 'N', 'G', 'P', 'Q', 'ROOM_MAX', 'PEER_COOLDOWN', 'OPEN_RETRY', 'COUNTDOWN', 'RECONNECT_GRACE', 'SETUP_GRACE', 'REHEARSAL_GRACE']) {
   const n = Number(process.env[k]);
   if (process.env[k] && Number.isFinite(n)) cfg[k] = n;
 }

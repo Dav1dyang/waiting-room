@@ -287,8 +287,8 @@ test('hanging up closes your window and shades the stranger', async () => {
   });
   await pa.click('#hangup');
 
-  const wb = await until(pb, (s) => hasLine(s, LINES.left), 'B is told the stranger left');
-  assert.equal(wb.state, 'shaded');
+  await until(pb, (s) => hasLine(s, LINES.left), 'B is told the stranger left');
+  await until(pb, (s) => s.state === 'shaded', 'B shades');
   await until(pb, (s) => hasLine(s, LINES.requeued), 'B is back in the queue');
   await until(pb, (s) => s && s.collapsed, 'B rolls back up', 8000);
 

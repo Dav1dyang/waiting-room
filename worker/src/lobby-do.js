@@ -14,7 +14,7 @@ import { Lobby } from './lobby-core.js';
 import { addTurn } from './turn.js';
 
 const MS_VARS = ['T', 'F', 'N', 'G', 'P', 'Q', 'ROOM_MAX', 'PEER_COOLDOWN', 'OPEN_RETRY', 'TICKET_TTL',
-  'COUNTDOWN', 'MAX_OPENS', 'RECONNECT_GRACE'];
+  'COUNTDOWN', 'MAX_OPENS', 'RECONNECT_GRACE', 'SETUP_GRACE', 'REHEARSAL_GRACE'];
 const POST_KINDS = { '/api/register': 'register', '/api/hook': 'hook', '/api/off': 'off', '/api/rehearse': 'rehearse' };
 const HOOKS_PER_SECOND = 10;
 const TICK_MS = 1000;

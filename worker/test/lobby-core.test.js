@@ -70,9 +70,11 @@ test('a quick task never opens; a stop under T ends it silently', () => {
   const l = mk();
   reg(l, 'tokenaaaa1');
   hook(l, 'tokenaaaa1', 'started', 0);
-  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 5 * S), { quit: true }, 'nothing on screen: the browser may quit');
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 5 * S), {}, 'just registered: the setup page may be open, so no quit');
+  hook(l, 'tokenaaaa1', 'started', 700 * S);
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 705 * S), { quit: true }, 'later, nothing on screen: the browser may quit');
   assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'done');
-  assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 20 * S), {}, 'a hook after done starts a fresh armed task');
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 720 * S), {}, 'a hook after done starts a fresh armed task');
   assert.equal(l.s.tokens.tokenaaaa1.task.phase, 'armed');
 });
 
@@ -615,6 +617,27 @@ test('the quit hint and the count reply say whether a window exists or is coming
   assert.deepEqual(hook(l, 'tokenaaaa1', 'tick', 18 * S), {});
   hook(l, 'tokenaaaa1', 'stopped', 19 * S);
   c = l.apply({ kind: 'count', token: 'tokenaaaa1', now: 20 * S }).find((f) => f.type === 'reply').body;
-  assert.equal(c.window, false, 'closed by the lobby');
-  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 21 * S), { quit: true });
+  assert.equal(c.window, true, 'closed by the lobby, but the setup grace still holds');
+  c = l.apply({ kind: 'count', token: 'tokenaaaa1', now: 700 * S }).find((f) => f.type === 'reply').body;
+  assert.equal(c.window, false, 'after the setup grace');
+  hook(l, 'tokenaaaa1', 'started', 700 * S);
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 701 * S), { quit: true });
+});
+
+test('the reaper leaves the browser alone right after setup and around a test window', () => {
+  const l = mk();
+  reg(l, 'tokenaaaa1', 0);
+  hook(l, 'tokenaaaa1', 'started', 1 * S);
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 4 * S), {}, 'a short first turn must not kill the setup page');
+  l.apply({ kind: 'rehearse', token: 'tokenaaaa1', now: 650 * S });
+  const r = hook(l, 'tokenaaaa1', 'started', 651 * S);
+  assert.ok(r.open, 'the test window');
+  wsOpen(l, ticketOf(r), 652 * S);
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 654 * S), {}, 'the test window is still closing itself');
+  hook(l, 'tokenaaaa1', 'started', 680 * S);
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 682 * S), { quit: true }, 'twenty seconds later the browser may go');
+  reg(l, 'tokenaaaa1', 690 * S);
+  l.apply({ kind: 'off', token: 'tokenaaaa1', now: 691 * S });
+  const c = l.apply({ kind: 'count', token: 'tokenaaaa1', now: 692 * S }).find((f) => f.type === 'reply').body;
+  assert.equal(c.window, false, 'off ends the setup grace too');
 });

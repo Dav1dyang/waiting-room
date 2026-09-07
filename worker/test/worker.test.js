@@ -155,14 +155,14 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
   await waitFor(b, (m) => m.type === 'line' && m.key === 'requeued');
 
   // One person is left waiting. `count` is other people, so B sees nobody and A sees B.
-  assert.deepEqual((await get('/api/count?t=' + B)).body, { count: 0, enabled: true }, 'B saw ' + trace(b));
-  assert.deepEqual((await get('/api/count?t=' + A)).body, { count: 1, enabled: true }, 'B saw ' + trace(b));
+  assert.deepEqual((await get('/api/count?t=' + B)).body, { count: 0, enabled: true, window: true }, 'B saw ' + trace(b));
+  assert.deepEqual((await get('/api/count?t=' + A)).body, { count: 1, enabled: true, window: true }, 'A just registered: setup grace');
 
   // Off closes the last window.
   assert.deepEqual((await post('/api/off', { token: B })).body, { ok: true });
   assert.equal((await waitFor(b, (m) => m.type === 'close')).m.reason, 'off');
-  assert.deepEqual((await get('/api/count?t=' + B)).body, { count: 0, enabled: false });
-  assert.deepEqual((await get('/api/count?t=' + A)).body, { count: 0, enabled: true }, 'nobody left');
+  assert.deepEqual((await get('/api/count?t=' + B)).body, { count: 0, enabled: false, window: false }, 'off: the browser may go');
+  assert.deepEqual((await get('/api/count?t=' + A)).body, { count: 0, enabled: true, window: true }, 'nobody left');
 
   // A rehearsal window rides the next hook, says so, and joins no queue.
   const C = 'tokenccccc3';
@@ -173,7 +173,7 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
   const c = connect(openC);
   assert.equal((await waitFor(c, (m) => m.type === 'hello')).m.rehearsal, true);
   await waitFor(c, (m) => m.type === 'line' && m.key === 'rehearsal');
-  assert.deepEqual((await get('/api/count?t=' + C)).body, { count: 0, enabled: true }, 'a rehearsal joins no queue');
+  assert.deepEqual((await get('/api/count?t=' + C)).body, { count: 0, enabled: true, window: true }, 'a rehearsal joins no queue');
   c.ws.close();
 });
 

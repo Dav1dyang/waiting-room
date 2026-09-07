@@ -31,6 +31,8 @@ All in the lobby's config (`worker/wrangler.jsonc` `vars`), provisional until Ph
 | `OPEN_RETRY` | 30 s | If no window ever connected after "open", one more "open" is allowed. |
 | `TICKET_TTL` | 10 min | A room ticket must be used within this time. |
 | `RECONNECT_GRACE` | 15 s | A dropped socket keeps its window and room this long. |
+| `SETUP_GRACE` | 10 min | After `register`, the setup page may be open in the plugin's browser: no `quit` hint, `window: true`. |
+| `REHEARSAL_GRACE` | 20 s | After a test window is issued it is still closing itself: same. |
 
 ## 3. Hook events
 
@@ -51,7 +53,7 @@ The plugin classifies on the machine (`plugin/scripts/signal.sh`) and sends one 
 { "token": "k8s2vq7m…", "event": "tick", "why": null, "session": "3f9a…(16 hex of sha256)", "ts": 1757200000000 }
 ```
 
-Reply `{}` or, at most once per task, `{ "open": "https://…/room?t=TICKET" }`. The plugin opens that URL as an app window in its own Chrome instance (its own profile under `~/.waiting-room/chrome`, launched hidden, D-87), under an atomic lock, and never prints anything. A reply of `{ "quit": true }` means no window exists and none is on its way, so the plugin may quit that instance.
+Reply `{}` or, at most once per task, `{ "open": "https://…/room?t=TICKET" }`. The plugin opens that URL as an app window in its own Chrome instance (its own profile under `~/.waiting-room/chrome`, launched hidden, D-87), under an atomic lock, and never prints anything. A reply of `{ "quit": true }` means nothing is on screen in that instance and nothing is on its way, so the plugin may quit it. It is withheld for SETUP_GRACE after `register` (the setup page lives in the same instance) and for REHEARSAL_GRACE after a test window is issued.
 
 `ts` is the plugin's clock and `session` is a hash of the Claude Code session id. Hooks are async, so they can arrive out of order: a `stopped` older than the newest `started` or `tick` is ignored, and a `tick` older than the `stopped` that ended the task is ignored. One machine can run several Claude sessions: a task ends when the last session that touched it stops (D-09). Nothing else in the body is read.
 
