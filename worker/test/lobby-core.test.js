@@ -629,11 +629,12 @@ test('the reaper leaves the browser alone right after setup and around a test wi
   reg(l, 'tokenaaaa1', 0);
   hook(l, 'tokenaaaa1', 'started', 1 * S);
   assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 4 * S), {}, 'a short first turn must not kill the setup page');
-  l.apply({ kind: 'rehearse', token: 'tokenaaaa1', now: 650 * S });
-  const r = hook(l, 'tokenaaaa1', 'started', 651 * S);
-  assert.ok(r.open, 'the test window');
-  wsOpen(l, ticketOf(r), 652 * S);
-  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 654 * S), {}, 'the test window is still closing itself');
+  // Inside the setup grace, as on a real first run: the test window must still open at once.
+  l.apply({ kind: 'rehearse', token: 'tokenaaaa1', now: 30 * S });
+  const r = hook(l, 'tokenaaaa1', 'started', 31 * S);
+  assert.ok(r.open, 'the test window opens during the setup grace');
+  wsOpen(l, ticketOf(r), 32 * S);
+  assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 34 * S), {}, 'the test window is still closing itself');
   hook(l, 'tokenaaaa1', 'started', 680 * S);
   assert.deepEqual(hook(l, 'tokenaaaa1', 'stopped', 682 * S), { quit: true }, 'twenty seconds later the browser may go');
   reg(l, 'tokenaaaa1', 690 * S);
