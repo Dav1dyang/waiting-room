@@ -14,7 +14,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const WORKER = path.join(here, '..');
 
 // The lobby is told to arm after one second so a test does not wait fifteen.
-const T = 1000;
+// Set WR_E2E_BASE (and WR_E2E_INVITE, WR_E2E_T) to run the same suite against a deployed lobby.
+const EXTERNAL = process.env.WR_E2E_BASE || '';
+const INVITE = process.env.WR_E2E_INVITE || 'DUCK';
+const T = EXTERNAL ? Number(process.env.WR_E2E_T || 15000) : 1000;
 const LAUNCH_ARGS = [
   '--use-fake-device-for-media-stream',
   '--use-fake-ui-for-media-stream',
@@ -105,7 +108,7 @@ async function emptyLobby(ms = 8000) {
 async function armed(tag) {
   const token = newToken(tag);
   openTokens.push(token);
-  const reg = await post('/api/register', { token, invite: 'DUCK' });
+  const reg = await post('/api/register', { token, invite: INVITE });
   assert.equal(reg.ok, true, 'register ' + token);
   await post('/api/hook', { token, event: 'started' });
   await wait(T + 300);
@@ -154,10 +157,14 @@ async function until(page, pred, what, ms = 10000) {
 const hasLine = (w, text) => !!w && w.lines.includes(text);
 
 before(async () => {
-  port = await freePort();
-  base = `http://127.0.0.1:${port}`;
-  lobby = await startLobby(port);
-  await post('/api/register', { token: COUNTER, invite: 'DUCK' });
+  if (EXTERNAL) {
+    base = EXTERNAL.replace(/\/+$/, '');
+  } else {
+    port = await freePort();
+    base = `http://127.0.0.1:${port}`;
+    lobby = await startLobby(port);
+  }
+  await post('/api/register', { token: COUNTER, invite: INVITE });
   browser = await chromium.launch({ channel: 'chrome', headless: true, args: LAUNCH_ARGS });
 });
 
@@ -344,7 +351,7 @@ test('a dropped socket comes back on its own', async () => {
 test('a rehearsal window says it is a test and closes itself', async () => {
   const token = newToken('h');
   openTokens.push(token);
-  await post('/api/register', { token, invite: 'DUCK' });
+  await post('/api/register', { token, invite: INVITE });
   const armedRes = await post('/api/rehearse', { token });
   assert.equal(armedRes.ok, true);
 
@@ -388,7 +395,7 @@ test('a stale ticket says so and gets out of the way', async () => {
 test('the setup page reads the lobby and refuses an unknown token', async () => {
   const token = newToken('s');
   openTokens.push(token);
-  await post('/api/register', { token, invite: 'DUCK' });
+  await post('/api/register', { token, invite: INVITE });
   const context = await browser.newContext({ permissions: PERMISSIONS, viewport: { width: 640, height: 620 } });
   const page = await context.newPage();
   openPages.push(page);
