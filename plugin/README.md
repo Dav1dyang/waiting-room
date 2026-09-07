@@ -3,7 +3,7 @@
 While your Claude works, a small window opens by itself and puts you on a call with a
 stranger whose Claude is also working. It closes when either Claude finishes.
 
-The stranger sees nothing about your task. Ever.
+waiting-room never shares your task with the person on the call.
 
 ## Install
 
@@ -32,9 +32,9 @@ Then turn it on with the invite code you were given:
 
 | Command | What it does |
 | --- | --- |
-| `/waiting-room:on [code]` | Registers this machine, prints the rules and a one-time setup link. The code is only needed the first time. |
-| `/waiting-room:off` | Stops all of it and closes any open window. |
-| `/waiting-room:status` | On or off, and how many people are waiting on their Claude right now. |
+| `/waiting-room:on [code]` | Turns waiting-room on and opens setup once. The invite code is only needed the first time. |
+| `/waiting-room:off` | Turns waiting-room off and closes its window. |
+| `/waiting-room:status` | Whether waiting-room is on, and how many other people are waiting for their Claude. |
 
 Visit the setup link once. It asks for the microphone and for notifications, plays the
 door sound, opens a test window, and lets you pick a desktop tint.
@@ -52,20 +52,20 @@ One small POST per hook, to `POST /api/hook`, with exactly five fields and nothi
 | `token` | 20 random characters made on your machine. Not your name, not your email, not your account. |
 | `event` | One of `started`, `tick`, `needs_you`, `paused`, `stopped`. |
 | `why` | `bg` or `question` on a pause, `null` the rest of the time. |
-| `session` | The first 16 hex of the sha256 of the session id. The id itself never leaves. |
+| `session` | The first 16 hexadecimal characters of the SHA-256 hash of the session id. The id itself is never sent. |
 | `ts` | Milliseconds since the epoch. |
 
 Your prompt, your working directory, the tool being run, the transcript path, and the
 assistant's message are read on your machine by `scripts/classify.js` and thrown away.
 None of them are ever sent. `plugin/test/signal.test.js` checks the bytes of every POST
-against the contents of every sample payload, so this stays true.
+against the contents of every sample payload.
 
 The room itself is peer to peer. Audio starts only when a stranger is matched, video only
 when you both click, and nothing is recorded.
 
 ## Pointing at a different lobby
 
-Highest wins:
+The first one set is used:
 
 1. `WAITING_ROOM_URL` in the environment
 2. one line in `~/.waiting-room/endpoint`

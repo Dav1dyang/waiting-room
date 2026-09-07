@@ -389,7 +389,7 @@ test('a stale ticket says so and gets out of the way', async () => {
   const page = await context.newPage();
   openPages.push(page);
   await page.goto(`${base}/room?t=nosuchticket`);
-  await page.waitForFunction(() => document.body.innerText.includes('This window is stale.'), null, { timeout: 8000 });
+  await page.waitForFunction(() => document.body.innerText.includes('This window is out of date. Closing.'), null, { timeout: 8000 });
 });
 
 test('the setup page reads the lobby and refuses an unknown token', async () => {
@@ -405,7 +405,7 @@ test('the setup page reads the lobby and refuses an unknown token', async () => 
   await page.click('#rehearseBtn');
   await page.waitForFunction(
     (armedText) => document.getElementById('statusLine').textContent === armedText,
-    'Armed. Now send Claude any message.',
+    'Ready. Now send Claude any message.',
     { timeout: 5000 },
   );
 

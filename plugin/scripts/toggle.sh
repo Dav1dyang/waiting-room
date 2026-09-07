@@ -17,20 +17,20 @@ say() {
     on)          printf '%s\n' "waiting-room is on." ;;
     off)         printf '%s\n' "waiting-room is off." ;;
     rules)
-      printf '%s\n' "Audio first. Video only when you both click."
-      printf '%s\n' "Nothing about your task is shared, ever."
-      printf '%s\n' "Nothing is recorded."
+      printf '%s\n' "Audio first. Video only when you both click Show video."
+      printf '%s\n' "Your task stays on your machine."
+      printf '%s\n' "waiting-room records nothing."
       printf '%s\n' "Be kind. Report is one click."
       ;;
-    setup)       printf '%s\n' "Set up once. A page just opened in its own Chrome window (mic, notifications, sound, a test window, your tint). If it did not, open this:" ;;
+    setup)       printf '%s\n' "Set up once, in the window that just opened. If it did not open, use this link:" ;;
     nobody)      printf '%s\n' "Nobody else is waiting right now. That is normal." ;;
     one_other)   printf '%s\n' "1 other is waiting for their Claude." ;;
     n_others)    printf '%s\n' "${2} others are waiting for their Claude." ;;
-    from_now_on) printf '%s\n' "From now on, when Claude works for more than 15 s, a small shaded window opens by itself." ;;
+    from_now_on) printf '%s\n' "When Claude works for more than 15 seconds, a small window opens behind your terminal." ;;
     bad_invite)  printf '%s\n' "That invite code did not work." ;;
-    refused)     printf '%s\n' "The lobby turned that down. Ask whoever gave you the invite code." ;;
-    unreachable) printf '%s\n' "The lobby is not reachable right now." ;;
-    no_lobby)    printf '%s\n' "(lobby not reachable)" ;;
+    refused)     printf '%s\n' "Could not turn waiting-room on. Ask whoever gave you the invite code." ;;
+    unreachable) printf '%s\n' "Cannot reach waiting-room right now. Try again in a minute." ;;
+    no_lobby)    printf '%s\n' "Cannot reach waiting-room right now. Try again in a minute." ;;
     line)        printf '%s\n' "${2}" ;;
     blank)       printf '\n' ;;
   esac

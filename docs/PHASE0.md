@@ -17,9 +17,9 @@ Browser tests from plan section 06, run on David's Mac on 2026-09-06 with `scrip
 
 Also found and fixed on the way: `AudioContext.resume()` never settles without a gesture, so the window now gives it 400 ms and moves on; before that fix the door sound and the probe both hung. And the plugin's instance quits itself when the lobby says nothing is on screen, so no stray Chrome stays in the Dock.
 
-## Still to do, ten minutes at the keyboard
+## Checks still to run
 
-1. Open the setup page for your token, allow the microphone ("on every visit") and notifications, play the door.
+1. Open your setup link, allow the microphone on every visit, allow notifications, and play the door sound.
 2. Run `BASE=https://<your lobby> INVITE=<code> WAIT=16 bash scripts/probe-mac.sh probe` once against the deployed lobby: same checks over the real origin, plus `micPermission: granted` after step 1.
 3. Type in the terminal while a window opens (send Claude a long task): do all keystrokes land? The probe says the window never took focus; this is the human check.
-4. A week of hook logging for the four timing numbers; nothing in the code needs to change for that, the lobby's vars are the knobs.
+4. Log hook events for a week (`WAITING_ROOM_LOG`) to check the four timing values. Adjust them in the lobby's vars; no code change is needed.

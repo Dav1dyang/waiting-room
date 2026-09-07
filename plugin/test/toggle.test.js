@@ -12,9 +12,9 @@ const { makeHome, removeHome, runToggle, TOKEN } = require('./helpers');
 const lines = (run) => run.stdout.replace(/\n$/, '').split('\n');
 
 const RULES = [
-  'Audio first. Video only when you both click.',
-  'Nothing about your task is shared, ever.',
-  'Nothing is recorded.',
+  'Audio first. Video only when you both click Show video.',
+  'Your task stays on your machine.',
+  'waiting-room records nothing.',
   'Be kind. Report is one click.',
 ];
 
@@ -32,12 +32,12 @@ test('on prints the whole welcome and turns the plugin on', async (t) => {
     '',
     ...RULES,
     '',
-    'Set up once. A page just opened in its own Chrome window (mic, notifications, sound, a test window, your tint). If it did not, open this:',
+    'Set up once, in the window that just opened. If it did not open, use this link:',
     `${lobby.url}/setup?t=xyz`,
     '',
     'Nobody else is waiting right now. That is normal.',
     '',
-    'From now on, when Claude works for more than 15 s, a small shaded window opens by itself.',
+    'When Claude works for more than 15 seconds, a small window opens behind your terminal.',
   ]);
 
   // The token is made once, and it is twenty lowercase letters and digits.
@@ -93,7 +93,7 @@ test('a lobby that is not there is one line, and leaves the plugin off', async (
 
   const run = await runToggle(['on', 'DUCK'], home, { WAITING_ROOM_URL: 'http://192.0.2.1:8788' });
   assert.strictEqual(run.status, 0);
-  assert.deepStrictEqual(lines(run), ['The lobby is not reachable right now.']);
+  assert.deepStrictEqual(lines(run), ['Cannot reach waiting-room right now. Try again in a minute.']);
   assert.ok(!fs.existsSync(path.join(dir, 'enabled')), 'still off');
 });
 
@@ -143,7 +143,7 @@ test('status says so when the lobby is not reachable', async (t) => {
   t.after(() => removeHome(home));
 
   const run = await runToggle(['status'], home, { WAITING_ROOM_URL: 'http://192.0.2.1:8788' });
-  assert.deepStrictEqual(lines(run), ['waiting-room is on.', '(lobby not reachable)']);
+  assert.deepStrictEqual(lines(run), ['waiting-room is on.', 'Cannot reach waiting-room right now. Try again in a minute.']);
 });
 
 test('status survives a lobby that answers with nonsense', async (t) => {
@@ -154,7 +154,7 @@ test('status survives a lobby that answers with nonsense', async (t) => {
 
   const run = await runToggle(['status'], home, { WAITING_ROOM_URL: lobby.url });
   assert.strictEqual(run.status, 0);
-  assert.deepStrictEqual(lines(run), ['waiting-room is on.', '(lobby not reachable)']);
+  assert.deepStrictEqual(lines(run), ['waiting-room is on.', 'Cannot reach waiting-room right now. Try again in a minute.']);
 });
 
 test('an invite code with shell in it is just characters', async (t) => {

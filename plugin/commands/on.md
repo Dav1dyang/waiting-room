@@ -1,5 +1,5 @@
 ---
-description: Turn waiting-room on for this machine. Prints the rules, a one-time setup link, and how many other people are waiting.
+description: Turn waiting-room on and open setup once.
 argument-hint: [invite-code]
 disable-model-invocation: true
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/toggle.sh *)

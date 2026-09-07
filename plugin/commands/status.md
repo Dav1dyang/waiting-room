@@ -1,5 +1,5 @@
 ---
-description: Show whether waiting-room is on, and how many other people are waiting on their Claude right now.
+description: Show whether waiting-room is on and how many other people are waiting for their Claude.
 disable-model-invocation: true
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/toggle.sh *)
 ---
