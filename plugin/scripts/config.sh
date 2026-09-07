@@ -4,14 +4,15 @@
 set -u
 
 # The lobby that ships with the plugin. The lead fills this in after the first deploy.
-DEFAULT_ENDPOINT="https://waiting-room.REPLACE-ME.workers.dev"
+DEFAULT_ENDPOINT="https://waiting-room.davidyangemail.workers.dev"
 
 # Everything this plugin remembers lives in one directory you can delete:
 #   token     20 characters, made once, the only name the lobby knows you by
 #   enabled   an empty file; present means on
 #   invite    the code you registered with, so "on" works a second time with no code
 #   endpoint  an optional lobby URL, one line, no trailing slash
-WR_DIR="${HOME}/.waiting-room"
+# WAITING_ROOM_DIR moves the whole directory, which the tests and the probe script use.
+WR_DIR="${WAITING_ROOM_DIR:-${HOME}/.waiting-room}"
 WR_TOKEN_FILE="$WR_DIR/token"
 WR_FLAG_FILE="$WR_DIR/enabled"
 WR_INVITE_FILE="$WR_DIR/invite"

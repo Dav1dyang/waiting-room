@@ -30,6 +30,11 @@ ENDPOINT="$(wr_endpoint)"
 REPLY="$(printf '%s' "$BODY" | curl -s -m 3 --connect-timeout 1 \
   -H 'Content-Type: application/json' --data-binary @- \
   "$ENDPOINT/api/hook" 2>/dev/null || true)"
+# Phase 0 logging, opt in: WAITING_ROOM_LOG=path appends one line per hook, the five fields
+# that were sent and the reply. Nothing from the hook input itself is written.
+if [ -n "${WAITING_ROOM_LOG:-}" ]; then
+  printf '%s %s %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$BODY" "${REPLY:-(no reply)}" >> "$WAITING_ROOM_LOG" 2>/dev/null || true
+fi
 [ -n "$REPLY" ] || exit 0
 
 # After a stop with nothing on screen the lobby says so, and the plugin's Chrome can go.

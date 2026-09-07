@@ -170,7 +170,7 @@ is still open, and which `status` reported as "(lobby not reachable)", correctly
   and land as `needs_you`.
 - **`StopFailure`.** Same: fixture yes, real API error no.
 - **The real endpoint.** `DEFAULT_ENDPOINT` in `scripts/config.sh` is still
-  `https://waiting-room.REPLACE-ME.workers.dev`. One line to change after the deploy.
+  the deployed lobby (filled in after the first deploy).
 - **Chrome.** `WAITING_ROOM_OPEN_CMD` stood in for the browser everywhere, so the actual
   `open -g -na "Google Chrome" --args --app=...` was never fired here. Research 08 says it
   works; Phase 0 test 3 is where it gets decided.
