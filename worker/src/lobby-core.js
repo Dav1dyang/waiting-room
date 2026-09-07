@@ -13,7 +13,7 @@
 
 export const DEFAULTS = {
   T: 15_000, F: 20_000, N: 90_000, G: 90_000, P: 600_000, Q: 45_000,
-  COUNTDOWN: 5, ROOM_MAX: 1_800_000, PEER_COOLDOWN: 60_000, OPEN_RETRY: 30_000,
+  COUNTDOWN: 10, ROOM_MAX: 1_800_000, PEER_COOLDOWN: 60_000, OPEN_RETRY: 30_000,
   TICKET_TTL: 600_000, MAX_OPENS: 2, RECONNECT_GRACE: 15_000,
   REPORT_BLOCK: 3, BLOCK_MS: 86_400_000, PROBES_KEPT: 20, PROBE_BYTES: 2048,
   TOKEN_TTL: 30 * 86_400_000,
@@ -353,8 +353,9 @@ export class Lobby {
     for (const tk of [a, b]) {
       const t = this.tok(tk);
       if (!t.win) continue;
+      // The line for these two already ends "Back in the queue.", so no second line for that.
       this.line(tk, key);
-      this.requeue(tk);
+      this.send(tk, { type: 'state', state: 'shaded' });
     }
   }
 

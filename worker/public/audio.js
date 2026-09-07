@@ -89,6 +89,10 @@ const CUES = {
     tone(c, t, { freq: 493.88, dur: 0.09, gain: 0.16 });
     tone(c, t + 0.09, { freq: 329.63, dur: 0.13, gain: 0.16 });
   },
+  // One short click a second while the goodbye counts down; a shade higher on the last three.
+  tick: (c, t, { n = 5 } = {}) => {
+    tone(c, t, { freq: n <= 3 ? 1318.5 : 987.8, dur: 0.03, gain: 0.13, type: 'square' });
+  },
   // Three clicks: a knuckle on a door, not a chime.
   knock: (c, t) => {
     for (let i = 0; i < 3; i++) {
@@ -101,7 +105,7 @@ const CUES = {
  * Play a cue. Returns the path that ran: 'audio', 'notification', 'blocked' or 'off'.
  * The notification fallback is not silent, so something still knocks (D-79 fallback).
  */
-export async function play(name, { notifyBody = '', allowNotify = true } = {}) {
+export async function play(name, { notifyBody = '', allowNotify = true, cue = {} } = {}) {
   if (!enabled) {
     lastPath = 'off';
     return lastPath;
@@ -111,7 +115,7 @@ export async function play(name, { notifyBody = '', allowNotify = true } = {}) {
     const state = await resumeAudio();
     if (state === 'running') {
       try {
-        CUES[name](c, c.currentTime + 0.02);
+        CUES[name](c, c.currentTime + 0.02, cue);
         lastPath = 'audio';
         return lastPath;
       } catch {
@@ -130,6 +134,7 @@ export async function play(name, { notifyBody = '', allowNotify = true } = {}) {
 export const doorIn = (o) => play('doorIn', { notifyBody: LINES.entered, ...o });
 export const doorOut = (o) => play('doorOut', { notifyBody: LINES.left, allowNotify: false, ...o });
 export const knock = (o) => play('knock', { notifyBody: LINES.done_you, allowNotify: false, ...o });
+export const tick = (n) => play('tick', { allowNotify: false, cue: { n } });
 
 /** A macOS notification, when permission is already granted. Never asks here. */
 export function notify(title, body, opts = {}) {

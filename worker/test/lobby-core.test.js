@@ -162,15 +162,15 @@ test('stop in a room: countdown on both sides, then close and shade', () => {
   bringUp(l, 'tokenaaaa1', 0);
   const t0 = bringUp(l, 'tokenbbbb2', 1 * S) + S;
   let fx = l.apply({ kind: 'hook', token: 'tokenaaaa1', event: 'stopped', session: 'abcd', now: t0, origin: ORIGIN });
-  assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['state:closing', 'countdown:5']);
-  assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['state:closing', 'countdown:5']);
+  assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['state:closing', 'countdown:10']);
+  assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['state:closing', 'countdown:10']);
   assert.equal(sends(fx, 'tokenaaaa1')[1].mine, true);
   assert.equal(sends(fx, 'tokenbbbb2')[1].mine, false);
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 9; i++) {
     fx = tick(l, t0 + i * S);
-    assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['countdown:' + (5 - i)]);
+    assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['countdown:' + (10 - i)]);
   }
-  fx = tick(l, t0 + 5 * S);
+  fx = tick(l, t0 + 10 * S);
   assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['close']);
   assert.ok(fx.find((f) => f.type === 'close' && f.token === 'tokenaaaa1'));
   assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['line:left', 'state:shaded', 'line:requeued']);
@@ -229,8 +229,8 @@ test('a quiet room ends softly and the pair is not rematched right away', () => 
   fx = tick(l, now + 56 * S);
   assert.equal(sends(fx).length, 0, 'silence started at 12 s, so 56 s is not yet quiet');
   fx = tick(l, now + 58 * S);
-  assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['line:quiet_room', 'state:shaded', 'line:requeued', 'others:1']);
-  assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['line:quiet_room', 'state:shaded', 'line:requeued', 'others:1']);
+  assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['line:quiet_room', 'state:shaded', 'others:1']);
+  assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['line:quiet_room', 'state:shaded', 'others:1']);
   assert.equal(l.count(), 2);
   hook(l, 'tokenaaaa1', 'tick', now + 57 * S);
   hook(l, 'tokenbbbb2', 'tick', now + 57 * S);
@@ -351,7 +351,7 @@ test('state survives a JSON round trip', () => {
   const now = bringUp(l, 'tokenbbbb2', 1 * S);
   const copy = new Lobby({ invites: ['DUCK'] }, JSON.parse(JSON.stringify(l.s)), () => 'z');
   const fx = copy.apply({ kind: 'hook', token: 'tokenaaaa1', event: 'stopped', session: 'abcd', now: now + S, origin: ORIGIN });
-  assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['state:closing', 'countdown:5']);
+  assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['state:closing', 'countdown:10']);
 });
 
 test('golden trace: one whole wait', () => {
@@ -370,13 +370,14 @@ test('golden trace: one whole wait', () => {
   H('tokenaaaa1', 'needs_you', 30 * S);
   H('tokenaaaa1', 'tick', 40 * S);
   H('tokenaaaa1', 'stopped', 50 * S);
-  for (let t = 51; t <= 55; t++) run({ kind: 'tick', now: t * S });
+  for (let t = 51; t <= 60; t++) run({ kind: 'tick', now: t * S });
   assert.deepEqual(log, [
     'a hello',
     'b hello', 'a match', 'b match', 'a state:room', 'a line:entered', 'a line:hear', 'b state:room', 'b line:entered', 'b line:hear', 'b others',
     'a line:brb', 'b line:brb',
     'a line:back', 'b line:back',
-    'a state:closing', 'b state:closing', 'a countdown:5', 'b countdown:5',
+    'a state:closing', 'b state:closing', 'a countdown:10', 'b countdown:10',
+    'a countdown:9', 'b countdown:9', 'a countdown:8', 'b countdown:8', 'a countdown:7', 'b countdown:7', 'a countdown:6', 'b countdown:6', 'a countdown:5', 'b countdown:5',
     'a countdown:4', 'b countdown:4', 'a countdown:3', 'b countdown:3', 'a countdown:2', 'b countdown:2', 'a countdown:1', 'b countdown:1',
     'a close', 'b line:left', 'b state:shaded', 'b line:requeued',
   ]);
@@ -471,7 +472,7 @@ test('if a new task starts during the goodbye, the window stays and shades', () 
   const t0 = bringUp(l, 'tokenbbbb2', 1 * S) + S;
   hook(l, 'tokenaaaa1', 'stopped', t0);
   hook(l, 'tokenaaaa1', 'started', t0 + 2 * S);
-  const fx = tick(l, t0 + 5 * S);
+  const fx = tick(l, t0 + 10 * S);
   assert.deepEqual(kinds(fx, 'tokenaaaa1'), ['state:shaded', 'line:requeued', 'others:1']);
   assert.deepEqual(kinds(fx, 'tokenbbbb2'), ['line:left', 'state:shaded', 'line:requeued', 'others:1']);
 });
@@ -588,7 +589,7 @@ test('a window adopted by a new task during the goodbye needs no second window',
   const t0 = bringUp(l, 'tokenbbbb2', 1 * S) + S;
   hook(l, 'tokenaaaa1', 'stopped', t0);
   hook(l, 'tokenaaaa1', 'started', t0 + 2 * S);
-  tick(l, t0 + 5 * S);
+  tick(l, t0 + 10 * S);
   const ta = l.s.tokens.tokenaaaa1;
   assert.ok(ta.win && ta.win.connected);
   assert.equal(l.s.tickets[ta.win.ticket].taskId, ta.task.id, 'the ticket now belongs to the new task');

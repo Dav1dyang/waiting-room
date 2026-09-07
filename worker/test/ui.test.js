@@ -121,6 +121,19 @@ test('every protocol line key has copy', () => {
 
 test('the count line always means other people', () => {
   assert.equal(countLine(0), 'Nobody else is waiting right now. Your Claude is still working.');
+  assert.equal(countLine(0, true), 'Nobody else is waiting right now.', 'in a room, no second sentence');
   assert.equal(countLine(1), '1 other is waiting for their Claude.');
   assert.equal(countLine(4), '4 others are waiting for their Claude.');
+});
+
+test('a speech gate that stays active repeats itself every repeatMs', () => {
+  const gate = makeSpeechGate({ on: 0.1, off: 0.05, minGapMs: 2000, releaseMs: 400, repeatMs: 10000 });
+  assert.equal(gate(0.5, 0), true, 'the first word');
+  assert.equal(gate(0.5, 5000), null, 'nothing new at five seconds');
+  assert.equal(gate(0.5, 10000), true, 'ten seconds in, still talking: said again');
+  assert.equal(gate(0.5, 15000), null);
+  assert.equal(gate(0.5, 20000), true, 'and again');
+  assert.equal(gate(0.0, 20100), null, 'a pause starts');
+  assert.equal(gate(0.0, 22600), false, 'after releaseMs and the minimum gap, quiet is sent');
+  assert.equal(gate(0.0, 40000), null, 'quiet never repeats');
 });

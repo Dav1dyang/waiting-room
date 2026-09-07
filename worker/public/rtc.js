@@ -133,6 +133,7 @@ export class Peer {
       return null;
     }
     const track = this.localAudio.getAudioTracks()[0];
+    if (track && this.muted) track.enabled = false;
     if (track) this.audioSender = this.pc.addTrack(track, this.localAudio);
     return this.localAudio;
   }
@@ -189,6 +190,12 @@ export class Peer {
       else if (s.type === 'inbound-rtp' && s.kind === 'audio') them = Math.max(them, s.audioLevel);
     });
     return { you, them };
+  }
+
+  /** Mute: the track stays captured (no permission dance later) but sends silence. */
+  setMuted(on) {
+    this.muted = !!on;
+    if (this.localAudio) for (const t of this.localAudio.getAudioTracks()) t.enabled = !this.muted;
   }
 
   micIsLive() {
