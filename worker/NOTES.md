@@ -87,6 +87,16 @@ the docs show) or an array. Any non-200, any throw, any three second timeout mea
 The budget counter is one storage key per calendar month, `turn:YYYY-MM`, counting rooms at
 an assumed 22.5 MB each; old months are never deleted, at a few bytes a year.
 
+## Known limits (Phase 2)
+
+From the third review round (D-91), left as they are on purpose for an invite-only alpha:
+
+- The whole lobby is one storage value. At roughly 300 bytes a token that is about 6,000 registrations before the 2 MB per-value ceiling; the fix is rows per token and per room. Probes are capped at twenty per token, 2 KB each.
+- State is saved before effects are dispatched. If the object dies in between, a room can exist whose `match` never reached a window; the quiet-room timer (Q, 45 s) closes it and requeues both. With TURN on, the mint's `fetch` also lets other events interleave; the same timer covers it.
+- `turn.js` reads the monthly counter before the mint and writes after, so two concurrent mints can undercount; and video senders carry no bitrate cap, so a relayed video room can cost more than the 100 kbps the budget assumes. TURN is off (D-82); fix both before turning it on.
+- The window opener's lock has no owner nonce: an opener that resumes after a 30 s stale takeover can remove the next owner's lock. The lobby hands out one `open` per task, so the worst case is a second attempt at the same URL.
+- `nextDeadline()` ignores unused-ticket and idle-token expiry; a lobby nobody touches keeps those records until the next request sweeps them.
+
 ## Not verified
 
 - A real deploy. I never ran `wrangler deploy` or touched an account.

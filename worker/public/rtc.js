@@ -3,6 +3,7 @@
 // Every signal frame carries the room id both ways, so a late frame from an old room is dropped.
 
 /** Audio constraints: the room is two people in two small rooms, so clean up the near end. */
+const MIC_TIMEOUT_MS = 10000;
 const AUDIO = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } };
 const VIDEO = { video: { width: 320, height: 240, frameRate: 15 } };
 
@@ -76,7 +77,19 @@ export class Peer {
       // Only video listens for `mute`. Chrome mutes a remote track on direction changes, and
       // pulling the audio track out of its stream on a transient mute would silence the
       // stranger for the rest of the room with no way back.
-      if (track.kind === 'video') track.addEventListener('mute', gone);
+      if (track.kind === 'video') {
+        track.addEventListener('mute', gone);
+        // Show video again on their side unmutes the same track: put it back.
+        track.addEventListener('unmute', () => {
+          if (this.closed) return;
+          try {
+            bag.addTrack(track);
+          } catch {
+            // already there
+          }
+          this.onTrack(track.kind, bag);
+        });
+      }
     };
 
     // The mic is captured now. Everything that touches the connection waits on this,
@@ -89,10 +102,29 @@ export class Peer {
   }
 
   async startAudio() {
+    // A permission prompt nobody answers must not stall negotiation: after MIC_TIMEOUT_MS the
+    // room goes listen-only, with an audio line in the offer so the stranger can still be heard.
+    let timedOut = false;
     try {
-      this.localAudio = await navigator.mediaDevices.getUserMedia(AUDIO);
+      this.localAudio = await Promise.race([
+        navigator.mediaDevices.getUserMedia(AUDIO).then((stream) => {
+          if (timedOut) stopStream(stream); // came too late: do not keep the mic open
+          return stream;
+        }),
+        new Promise((_, reject) => setTimeout(() => {
+          timedOut = true;
+          reject(new Error('MicTimeout'));
+        }, MIC_TIMEOUT_MS)),
+      ]);
     } catch (err) {
-      this.micError = String((err && err.name) || err);
+      this.micError = String((err && err.name) || (err && err.message) || err);
+      if (!this.closed) {
+        try {
+          this.pc.addTransceiver('audio', { direction: 'recvonly' });
+        } catch {
+          // no transceiver, no audio line: the stranger's answer will say so
+        }
+      }
       return null;
     }
     if (this.closed) {
@@ -167,15 +199,21 @@ export class Peer {
   /** Show video: capture, add the track, let negotiation happen by itself. */
   async addVideo() {
     if (this.videoSender || this.closed) return this.localVideo;
-    this.localVideo = await navigator.mediaDevices.getUserMedia(VIDEO);
-    if (this.closed) {
-      stopStream(this.localVideo);
-      this.localVideo = null;
-      return null;
-    }
-    const track = this.localVideo.getVideoTracks()[0];
-    this.videoSender = this.pc.addTrack(track, this.localAudio || this.localVideo);
-    return this.localVideo;
+    if (this.videoPending) return this.videoPending; // two quick clicks share one capture
+    this.videoPending = (async () => {
+      const stream = await navigator.mediaDevices.getUserMedia(VIDEO);
+      if (this.closed || this.videoSender) {
+        stopStream(stream);
+        return this.localVideo;
+      }
+      this.localVideo = stream;
+      const track = stream.getVideoTracks()[0];
+      this.videoSender = this.pc.addTrack(track, this.localAudio || stream);
+      return stream;
+    })().finally(() => {
+      this.videoPending = null;
+    });
+    return this.videoPending;
   }
 
   /** Hide video: drop the track, which renegotiates the same way. */

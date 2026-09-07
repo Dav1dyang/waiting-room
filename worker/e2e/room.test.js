@@ -366,9 +366,20 @@ test('a rehearsal window says it is a test and closes itself', async () => {
   assert.deepEqual(page.errors, []);
 });
 
-test('every window sends one Phase 0 probe', async () => {
+test('a probe window sends one Phase 0 probe; an ordinary one sends none', async () => {
+  // The ordinary window first, and gone before the probe window arrives, so the two never pair.
+  const b = await armed('q');
+  const plain = await openWindow(b.url);
+  await until(plain, (s) => s && s.state === 'shaded', 'the plain window is up');
+  await wait(2500);
+  assert.equal(await plain.evaluate(() => window.__wr.probe), null, 'no probe from a plain window');
+  const none = await fetch(`${base}/api/probes?t=${b.token}`).then((r) => r.json());
+  assert.equal(none.probes.length, 0);
+  await plain.context().close();
+  await wait(500);
+
   const a = await armed('p');
-  const page = await openWindow(a.url);
+  const page = await openWindow(a.url + '&probe=1');
   await until(page, (s) => s && s.state === 'shaded', 'the window is up');
   await page.waitForFunction(() => window.__wr.probe !== null, null, { timeout: 8000 });
 

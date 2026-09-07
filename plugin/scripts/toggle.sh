@@ -138,7 +138,7 @@ do_on() {
   say blank
   say rules
   say blank
-  if [ -n "$setup" ]; then
+  if [ -n "$setup" ] && wr_url_ok "$setup" /setup; then
     say setup
     say line "$setup"
     wr_open_setup "$setup"
@@ -170,6 +170,8 @@ do_status() {
   endpoint="$(wr_endpoint)"
 
   if wr_is_enabled; then say on; else say off; fi
+  # Never turned on: there is no token to ask with, and nothing to count.
+  [ -n "$token" ] || return 0
 
   reply="$(get_json "$endpoint/api/count?t=$token")" || {
     say no_lobby

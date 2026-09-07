@@ -78,7 +78,11 @@ export class Lobby {
     switch (ev.kind) {
       case 'register': this.register(ev); break;
       case 'off': this.off(ev); break;
-      case 'count': this.reply({ count: this.othersFor(ev.token), enabled: !!this.tok(ev.token)?.enabled, window: this.hasWindow(ev.token, now) }); break;
+      case 'count': {
+        const t = this.tok(ev.token);
+        this.reply(t ? { count: this.othersFor(ev.token), enabled: !!t.enabled, window: this.hasWindow(ev.token, now) } : { count: 0, enabled: false, window: false });
+        break;
+      }
       case 'rehearse': this.rehearse(ev); break;
       case 'probes': this.reply({ probes: this.tok(ev.token)?.probes || [] }); break;
       case 'hook': this.hook(ev); break;

@@ -54,6 +54,7 @@ export default {
 function toLobby(request, env, url, raw) {
   const headers = new Headers(request.headers);
   headers.set('x-wr-origin', url.origin);
+  headers.set('x-wr-ip', request.headers.get('cf-connecting-ip') || '');
   // A GET keeps the original request so the WebSocket upgrade survives the copy.
   // A POST is rebuilt because its body has already been read for the size check.
   const req = raw === undefined
@@ -67,8 +68,8 @@ function toLobby(request, env, url, raw) {
 async function readJson(request) {
   const declared = Number(request.headers.get('content-length') || '0');
   if (declared > MAX_BODY) return { error: 'big' };
-  const raw = await request.text();
-  if (raw.length > MAX_BODY) return { error: 'big' };
+  const raw = await readBounded(request, MAX_BODY);
+  if (raw === null) return { error: 'big' };
   let body;
   try {
     body = JSON.parse(raw || '{}');
@@ -77,6 +78,35 @@ async function readJson(request) {
   }
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { error: 'json' };
   return { raw: raw || '{}' };
+}
+
+/** Read at most `max` bytes of the body; past that, cancel the stream and say so with null. */
+async function readBounded(request, max) {
+  if (!request.body) return '';
+  const reader = request.body.getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      try {
+        await reader.cancel();
+      } catch {
+        // the stream is gone either way
+      }
+      return null;
+    }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    all.set(c, at);
+    at += c.byteLength;
+  }
+  return new TextDecoder().decode(all);
 }
 
 /** Serve one file from public/ under a friendlier path, with the two HTML headers. */

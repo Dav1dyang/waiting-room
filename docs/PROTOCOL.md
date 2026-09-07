@@ -61,9 +61,9 @@ Other HTTP routes:
 
 | Route | Body or query | Reply |
 | --- | --- | --- |
-| `POST /api/register` | `{ token, invite }` | `{ ok, count, setup }` or `{ ok:false, error:"invite" }` |
+| `POST /api/register` | `{ token, invite }` | `{ ok, count, setup }` or `{ ok:false, error:"invite" }`; 429 `{ ok:false, error:"busy" }` after ten wrong codes from one address in ten minutes, or three hundred from everyone in an hour |
 | `POST /api/off` | `{ token }` | `{ ok }`, closes any window |
-| `GET /api/count?t=TOKEN` | | `{ count, enabled, window }`; count means others, never you; window is true while a window exists or is on its way |
+| `GET /api/count?t=TOKEN` | | `{ count, enabled, window }`; count means others, never you; window is true while a window exists or is on its way; a token nobody registered gets `{ count:0, enabled:false, window:false }` |
 | `POST /api/rehearse` | `{ token }` | `{ ok }`, next hook opens a test window (D-84) |
 | `GET /api/probes?t=TOKEN` | | own Phase 0 probe records |
 | `GET /ws?t=TICKET` | | WebSocket upgrade |
@@ -121,7 +121,7 @@ Window to server:
 | `hangup` | | leave; out for this task |
 | `report` | | flag the peer (one flag per reporter per day) and leave; with no room, flag the last peer of the past minute and stay |
 | `bye` | `reason: "manual"` | sent on pagehide when the window was not told to close |
-| `probe` | `data` | Phase 0 measurements, stored per token |
+| `probe` | `data` | Phase 0 measurements, stored per token; only a window opened with `?probe=1` sends one |
 
 ## 7. Line keys
 
@@ -173,4 +173,4 @@ Candidates: task `queued` (not paused), a hook within F, a connected window that
 
 ## 11. Abuse and safety
 
-Every route needs a registered token; registration needs an invite code from `INVITES` (empty means open, alpha uses a code). Report flags the peer; flags from three different people in a day block a token for a day, and a blocked window closes at once. Tokens with no activity for 30 days are forgotten. Rooms never carry text. Nothing is stored beyond the lobby's in-memory state, a small SQLite blob for restarts, and the probe records you asked for.
+A socket that sends more than 40 frames a second (burst 120) is closed with 1008; a socket the lobby cannot vouch for (no attachment) is closed with 4001. Every route needs a registered token; registration needs an invite code from `INVITES` (empty means open, alpha uses a code). Report flags the peer; flags from three different people in a day block a token for a day, and a blocked window closes at once. Tokens with no activity for 30 days are forgotten. Rooms never carry text. Nothing is stored beyond the lobby's in-memory state, a small SQLite blob for restarts, and the probe records you asked for.
