@@ -11,7 +11,8 @@ plugin/
   commands/on.md off.md status.md
   scripts/config.sh            state dir, endpoint precedence, token, opener
   scripts/classify.js          hook payload in, one of five words out
-  scripts/signal.sh            the hook: POST, then maybe open a window
+  scripts/signal.sh            the hook: classify, then hand the five fields to deliver.sh
+  scripts/deliver.sh           POST, act on the reply, open under the lock; detached for a stop
   scripts/toggle.sh            the three commands, all copy in one say()
   test/                        fake lobby, helpers, three test files, run.sh
   README.md
