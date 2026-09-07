@@ -26,6 +26,10 @@ const REG_FAILS_IP = 10;
 const REG_FAILS_IP_MS = 600_000;
 const REG_FAILS_ALL = 300;
 const REG_FAILS_ALL_MS = 3_600_000;
+// With an open lobby (no invite code) this is the door: thirty new registrations from one
+// address in an hour, then 429. A home has one address; a person turns it on once.
+const REG_PER_IP = 30;
+const REG_PER_IP_MS = 3_600_000;
 const TICK_MS = 1000;
 // Frames bigger than this are nonsense; an SDP offer with video is a few kilobytes.
 const MAX_FRAME = 65536;
@@ -39,6 +43,7 @@ export class LobbyObject extends DurableObject {
     this.frames = new WeakMap();
     this.regFails = new Map();
     this.regFailsAll = { n: 0, until: 0 };
+    this.regOk = new Map();
     ctx.blockConcurrencyWhile(async () => {
       const saved = await ctx.storage.get('state');
       this.lobby = new Lobby(cfgFrom(env), saved || null);
@@ -88,6 +93,7 @@ export class LobbyObject extends DurableObject {
     }
     const out = await this.run(ev);
     if (kind === 'register' && out && out.error === 'invite') this.noteRegisterFailure(ip, now);
+    if (kind === 'register' && out && out.ok) this.noteRegisterOk(ip, now);
     return json(out);
   }
 
@@ -110,7 +116,21 @@ export class LobbyObject extends DurableObject {
     const byIp = this.regFails.get(ip);
     if (byIp && byIp.until > now && byIp.n >= REG_FAILS_IP) return false;
     if (this.regFailsAll.until > now && this.regFailsAll.n >= REG_FAILS_ALL) return false;
+    const ok = this.regOk.get(ip);
+    if (ok && ok.until > now && ok.n >= REG_PER_IP) return false;
     return true;
+  }
+
+  noteRegisterOk(ip, now) {
+    let ok = this.regOk.get(ip);
+    if (!ok || ok.until <= now) {
+      ok = { n: 0, until: now + REG_PER_IP_MS };
+      this.regOk.set(ip, ok);
+    }
+    ok.n += 1;
+    if (this.regOk.size > 1000) {
+      for (const [k, v] of this.regOk) if (v.until <= now) this.regOk.delete(k);
+    }
   }
 
   noteRegisterFailure(ip, now) {

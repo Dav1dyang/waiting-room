@@ -61,7 +61,7 @@ Other HTTP routes:
 
 | Route | Body or query | Reply |
 | --- | --- | --- |
-| `POST /api/register` | `{ token, invite }` | `{ ok, count, setup }` or `{ ok:false, error:"invite" }`; 429 `{ ok:false, error:"busy" }` after ten wrong codes from one address in ten minutes, or three hundred from everyone in an hour |
+| `POST /api/register` | `{ token, invite }` | `{ ok, count, setup }` or `{ ok:false, error:"invite" }`; 429 `{ ok:false, error:"busy" }` after ten wrong codes from one address in ten minutes, three hundred from everyone in an hour, or thirty registrations from one address in an hour |
 | `POST /api/off` | `{ token }` | `{ ok }`, closes any window |
 | `GET /api/count?t=TOKEN` | | `{ count, enabled, window }`; count means others, never you; window is true while a window exists or is on its way; a token nobody registered gets `{ count:0, enabled:false, window:false }` |
 | `POST /api/rehearse` | `{ token }` | `{ ok }`, next hook opens a test window (D-84) |
@@ -173,4 +173,4 @@ Candidates: task `queued` (not paused), a hook within F, a connected window that
 
 ## 11. Abuse and safety
 
-A socket that sends more than 40 frames a second (burst 120) is closed with 1008; a socket the lobby cannot vouch for (no attachment) is closed with 4001. Every route needs a registered token; registration needs an invite code from `INVITES` (empty means open, alpha uses a code). Report flags the peer; flags from three different people in a day block a token for a day, and a blocked window closes at once. Tokens with no activity for 30 days are forgotten. Rooms never carry text. Nothing is stored beyond the lobby's in-memory state, a small SQLite blob for restarts, and the probe records you asked for.
+A socket that sends more than 40 frames a second (burst 120) is closed with 1008; a socket the lobby cannot vouch for (no attachment) is closed with 4001. Every route needs a registered token; registration needs an invite code only when `INVITES` is set (the public lobby has it unset since 2026-09-07: open, with the per-address caps above). Report flags the peer; flags from three different people in a day block a token for a day, and a blocked window closes at once. Tokens with no activity for 30 days are forgotten. Rooms never carry text. Nothing is stored beyond the lobby's in-memory state, a small SQLite blob for restarts, and the probe records you asked for.

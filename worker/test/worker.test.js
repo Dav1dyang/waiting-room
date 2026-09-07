@@ -198,17 +198,29 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
   for (let i = 0; i < 200; i += 1) send(d, { type: 'speech', active: i % 2 === 0 });
   assert.equal(await closedCode(d), 1008, 'flooding closes the socket');
 
+  // Under wrangler dev the client address header passes through, so each section below can
+  // be its own address. (Cloudflare overwrites the header at the edge; a client cannot pick it.)
+  // Thirty registrations from one address in an hour, then 429: the door of an open lobby.
+  const flood = { 'cf-connecting-ip': '10.9.9.2' };
+  let cappedAt = -1;
+  for (let i = 0; i < 35 && cappedAt < 0; i += 1) {
+    const r = await post('/api/register', { token: 'floodtoken' + String(i).padStart(2, '0'), invite: 'DUCK' }, flood);
+    if (r.res.status === 429) cappedAt = i;
+    else assert.equal(r.body.ok, true);
+  }
+  assert.equal(cappedAt, 30, 'thirty registrations, then 429');
+  assert.equal((await post('/api/register', { token: 'tokenaaaa1', invite: 'DUCK' })).body.ok, true, 'another address is unaffected');
+
   // Invite guessing: ten wrong codes, then registration answers 429 for a while.
-  // Last in the file on purpose: wrangler dev has no client address, so every caller shares one.
-  // One wrong code was already tried at the top of this test, so the door shuts within ten more.
+  const guess = { 'cf-connecting-ip': '10.9.9.1' };
   let busyAt = -1;
   for (let i = 0; i < 12 && busyAt < 0; i += 1) {
-    const r = await post('/api/register', { token: 'guesserrrr' + i, invite: 'NOPE' + i });
+    const r = await post('/api/register', { token: 'guesserrrr' + i, invite: 'NOPE' + i }, guess);
     if (r.res.status === 429) busyAt = i;
     else assert.deepEqual(r.body, { ok: false, error: 'invite' });
   }
-  assert.ok(busyAt >= 8 && busyAt <= 10, 'ten wrong codes, then 429; got it at ' + busyAt);
-  const blocked = await post('/api/register', { token: 'guesserrrr9', invite: 'DUCK' });
+  assert.equal(busyAt, 10, 'ten wrong codes, then 429; got it at ' + busyAt);
+  const blocked = await post('/api/register', { token: 'guesserrrr9', invite: 'DUCK' }, guess);
   assert.equal(blocked.res.status, 429, 'even the right code waits now');
   assert.deepEqual(blocked.body, { ok: false, error: 'busy' });
 });
@@ -240,10 +252,10 @@ async function waitForServer(ms) {
   return false;
 }
 
-async function post(route, body) {
+async function post(route, body, headers = {}) {
   const res = await fetch(base + route, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(body),
   });
   return { res, body: await res.json() };

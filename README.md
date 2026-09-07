@@ -20,7 +20,7 @@ Classic Mac window dressing in the Poolsuite spirit: cream panel, one-pixel blac
 
 ## Install
 
-You need a Mac with Google Chrome, Claude Code, and an invite code from whoever runs the lobby. Chrome is what the window is built for; without it the default browser opens it, with fewer guarantees.
+You need a Mac with Google Chrome and Claude Code. The lobby is open: no invite code. Chrome is what the window is built for; without it the default browser opens it, with fewer guarantees.
 
 ```
 claude plugin marketplace add Dav1dyang/waiting-room
@@ -30,7 +30,7 @@ claude plugin install waiting-room@waiting-room
 Start a new `claude` session anywhere:
 
 ```
-/waiting-room:on <invite code>        # prints the rules, opens the setup page once
+/waiting-room:on                      # prints the rules, opens the setup page once
 ```
 
 The setup page opens in the plugin's own Chrome window. Allow the microphone on every visit and allow notifications. Play the door, pick a tint, then set up a test window and send Claude any message. The test window shows you the goodbye once. From then on, give Claude something that takes a while.
@@ -44,7 +44,7 @@ To run this checkout instead of an installed copy, see `plugin/README.md`.
 
 ## The rules
 
-Audio first. Video only when you both click Show video. Your task stays on your machine. waiting-room records nothing. Rooms end after 30 minutes. Be kind; Report is one click.
+Audio first. Video only when you both click Show video. Your task stays on your machine. waiting-room records nothing. Rooms end after 30 minutes. Be kind; Report is one click. Three reports in a day and you are out for a day.
 
 ## What leaves your machine
 
@@ -74,7 +74,7 @@ Planned and built 2026-09-05 to 2026-09-07 with Claude Code (Fable 5.1): ten Opu
 cd worker && npm install
 npm test                              # core, pages, one whole wait through wrangler dev
 npm run e2e                           # two Chrome windows meet through the mock lobby
-WR_E2E_BASE=https://<lobby> WR_E2E_INVITE=<code> npm run e2e   # the same, against a live lobby
+WR_E2E_BASE=https://<lobby> npm run e2e   # the same, against a live lobby (add WR_E2E_INVITE=<code> if yours needs one)
 bash ../plugin/test/run.sh            # the plugin against a fake lobby
 claude plugin validate --strict ../plugin
 bash ../scripts/probe-mac.sh          # one real window on this Mac (needs Google Chrome)
