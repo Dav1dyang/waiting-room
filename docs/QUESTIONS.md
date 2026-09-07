@@ -67,3 +67,4 @@ Answer (2026-09-06): "geneva." (D-81)
 
 - ~~Cloudflare dashboard: can a free-plan account create a Realtime TURN key without a card?~~ Answered 2026-09-06: no, enabling Realtime needs a card (community thread plus Cloudflare's billing rule; the docs themselves are silent). Plan: STUN only until a pair fails to connect, then the card with our own cap (D-82). Add the card in Phase 2 at the earliest, before the Reddit post at the latest.
 - Ten minutes in r/ClaudeAI and r/cursor searching for anything like this; the research agents cannot crawl Reddit. This matters more now that Reddit is the second audience.
+- Ten minutes at the keyboard after the build: the checklist in docs/PHASE0.md (mic and notifications in the plugin's Chrome, one probe against the live lobby, the typing check), then a week with `WAITING_ROOM_LOG` on.

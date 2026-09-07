@@ -2,6 +2,16 @@
 
 Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 
+## 2026-09-06 (v0.6, the alpha built)
+
+- Plan v0.6 published; v0.5 archived at `docs/archive/plan-v0.5.html`. Mockup stays v2.3.
+- Built on `feat/alpha`, contract first: docs/PROTOCOL.md, then the pure lobby core (43 tests), then three parallel builders: the Worker and Durable Object (one whole wait through wrangler dev), the room and setup pages (14 unit tests, 10 Playwright end-to-end cases with two Chrome contexts and fake media), and the plugin (35 tests, `claude plugin validate --strict` clean for plugin and marketplace).
+- Two review rounds on the core: Codex (12 findings) and the internal code review (15 findings), all applied; D-85 and D-86 record the model as built.
+- Phase 0 browser tests on David's Mac (docs/PHASE0.md): focus, self-close, resize floor, rehearsal, audio with no click. Finding: a window opened into the everyday Chrome takes focus within half a second; the plugin now opens its own Chrome instance, launched hidden, with the autoplay flag, and quits it when idle (D-87). `AudioContext.resume()` capped at 400 ms.
+- Deployed to workers.dev on the free plan with the invite code as a secret; real Claude Code hooks (`claude -p`) opened a room URL at 26 s against the live lobby; the ten end-to-end cases pass against it too.
+- Opt-in hook log (`WAITING_ROOM_LOG`) for the Phase 0 week; `WAITING_ROOM_DIR` for tests.
+- Root README rewritten for the built repo; plugin and worker READMEs by the builders.
+
 ## 2026-09-06 (v0.5, fourth round of answers)
 
 - Plan v0.5 published to the plan artifact; mockup v2.3 to the design canvas (same URLs). v0.4 archived at `docs/archive/plan-v0.4.html`.
