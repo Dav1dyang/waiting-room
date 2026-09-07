@@ -23,7 +23,10 @@ WR_LOCK_DIR="$WR_DIR/opening.lock"
 # instance launched hidden, it stays behind the terminal every time, and that instance can take
 # an autoplay flag so the door and the stranger's voice play with no click.
 WR_CHROME_DIR="$WR_DIR/chrome"
-WR_CHROME_FLAGS="--user-data-dir=$WR_CHROME_DIR --no-first-run --no-default-browser-check --autoplay-policy=no-user-gesture-required"
+WR_CHROME_OPTS="--no-first-run --no-default-browser-check --autoplay-policy=no-user-gesture-required"
+# The whole flag string, for scripts that read it; the launches below quote the profile path
+# on its own, so a state directory with a space in it still works.
+WR_CHROME_FLAGS="--user-data-dir=$WR_CHROME_DIR $WR_CHROME_OPTS"
 # How long after a stop to ask the lobby whether a window is still up before quitting that Chrome.
 WR_IDLE_WAIT="${WAITING_ROOM_IDLE_WAIT:-8}"
 
@@ -129,6 +132,11 @@ wr_detach() {
 # The tests use that to capture the URL instead of launching a browser.
 wr_open_url() {
   local url="$1"
+  # An instance that has ever been in front (the setup page opens that way) brings every later
+  # window to the front too. So an ordinary window always gets a fresh, hidden launch: quit what
+  # is running first. A test window keeps the instance, and the setup page beside it (D-93).
+  # If the old instance will not go, do not hand it a window: the lobby retries in 30 s.
+  [ -n "${WR_KEEP_INSTANCE:-}" ] || wr_quit_chrome_wait || return 0
   if [ -n "${WAITING_ROOM_OPEN_CMD:-}" ]; then
     sh -c "$WAITING_ROOM_OPEN_CMD \"\$1\"" wr "$url" >/dev/null 2>&1 || true
     return 0
@@ -136,7 +144,7 @@ wr_open_url() {
   mkdir -p "$WR_CHROME_DIR" 2>/dev/null || true
   # -n starts a second instance (the profile keeps it apart from your own Chrome); -g keeps it behind.
   # shellcheck disable=SC2086
-  open -g -na "Google Chrome" --args $WR_CHROME_FLAGS --app="$url" >/dev/null 2>&1 && return 0
+  open -g -na "Google Chrome" --args --user-data-dir="$WR_CHROME_DIR" $WR_CHROME_OPTS --app="$url" >/dev/null 2>&1 && return 0
   # No Chrome: the default browser, still in the background.
   open -g "$url" >/dev/null 2>&1 || true
   return 0
@@ -152,9 +160,18 @@ wr_open_setup() {
   fi
   mkdir -p "$WR_CHROME_DIR" 2>/dev/null || true
   # shellcheck disable=SC2086
-  open -na "Google Chrome" --args $WR_CHROME_FLAGS "$url" >/dev/null 2>&1 && return 0
+  open -na "Google Chrome" --args --user-data-dir="$WR_CHROME_DIR" $WR_CHROME_OPTS "$url" >/dev/null 2>&1 && return 0
   open "$url" >/dev/null 2>&1 || true
   return 0
+}
+
+# The profile path as pgrep and pkill want it: they read a regular expression, so the dots
+# and anything else that means something there are escaped.
+wr_chrome_pat() {
+  printf '%s' "--user-data-dir=$WR_CHROME_DIR" | sed 's/[][\.*^$+?(){}|]/\\&/g'
+}
+wr_chrome_running() {
+  pgrep -f -- "$(wr_chrome_pat)" >/dev/null 2>&1
 }
 
 # Quit the plugin's Chrome. Nothing else runs with that profile path, so the match is exact.
@@ -164,9 +181,61 @@ wr_quit_chrome() {
     sh -c "$WAITING_ROOM_QUIT_CMD" >/dev/null 2>&1 || true
     return 0
   fi
-  if pgrep -f -- "--user-data-dir=$WR_CHROME_DIR" >/dev/null 2>&1; then
-    pkill -f -- "--user-data-dir=$WR_CHROME_DIR" >/dev/null 2>&1 || true
+  if wr_chrome_running; then
+    pkill -f -- "$(wr_chrome_pat)" >/dev/null 2>&1 || true
   fi
+  return 0
+}
+
+# Quit, then wait (up to three seconds) until the profile is free, so the next launch is a new
+# instance and not a window handed to the dying one. Returns 1 if it is still there.
+wr_quit_chrome_wait() {
+  local i
+  if [ -n "${WAITING_ROOM_QUIT_CMD:-}" ]; then wr_quit_chrome; return 0; fi
+  wr_chrome_running || return 0
+  wr_quit_chrome
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+    wr_chrome_running || return 0
+    sleep 0.2
+  done
+  return 1
+}
+
+# ---- the opening lock ----
+# One directory, made atomically, with the owner's name inside. Whoever holds it may open or
+# quit the browser; nobody else touches the browser meanwhile. A lock older than WR_LOCK_STALE
+# belonged to a process that died and is taken back. The owner name is checked again right
+# before the browser is touched, so an opener that slept through a takeover does nothing.
+wr_lock_age() {
+  node -e '
+const fs = require("node:fs");
+try {
+  const s = fs.statSync(process.argv[1]);
+  process.stdout.write(String(Math.floor((Date.now() - s.mtimeMs) / 1000)));
+} catch (e) { process.stdout.write("0"); }' "$WR_LOCK_DIR" 2>/dev/null || printf '0'
+}
+wr_lock_take() {
+  local owner="$1" tries="${2:-1}" age i
+  [ -n "$owner" ] || return 1
+  for i in $(seq 1 "$tries"); do
+    if [ -d "$WR_LOCK_DIR" ]; then
+      age="$(wr_lock_age)"
+      case "$age" in ''|*[!0-9]*) age=0 ;; esac
+      if [ "$age" -ge "$WR_LOCK_STALE" ]; then rm -rf "$WR_LOCK_DIR" 2>/dev/null || true; fi
+    fi
+    if mkdir "$WR_LOCK_DIR" 2>/dev/null; then
+      printf '%s' "$owner" > "$WR_LOCK_DIR/owner" 2>/dev/null || true
+      return 0
+    fi
+    [ "$i" -lt "$tries" ] && sleep 0.2
+  done
+  return 1
+}
+wr_lock_owned() {
+  [ -n "$1" ] && [ "$(cat "$WR_LOCK_DIR/owner" 2>/dev/null)" = "$1" ]
+}
+wr_lock_release() {
+  wr_lock_owned "$1" && rm -rf "$WR_LOCK_DIR" 2>/dev/null
   return 0
 }
 
@@ -179,7 +248,13 @@ wr_quit_if_idle() {
   endpoint="$(wr_endpoint)"
   reply="$(curl -s -m 5 --connect-timeout 3 "$endpoint/api/count?t=$token" 2>/dev/null || true)"
   case "$reply" in
-    *'"window":false'*) wr_quit_chrome ;;
+    *'"window":false'*)
+      # Under the same lock as the opener: the lobby may have handed out a window since it answered.
+      if wr_lock_take "reaper.$$"; then
+        wr_quit_chrome
+        wr_lock_release "reaper.$$"
+      fi
+      ;;
   esac
   return 0
 }

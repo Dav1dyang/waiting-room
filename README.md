@@ -26,15 +26,15 @@ One small POST per hook: your token, one of five words (`started`, `tick`, `need
 
 | Path | What it is |
 | --- | --- |
-| `plugin/` | The Claude Code plugin: eight async hooks, three commands, the classifier, the window opener, 36 tests. `plugin/README.md` for install and uninstall. |
-| `worker/` | The lobby: one Cloudflare Worker, one Durable Object, the pure state machine in `src/lobby-core.js`, the room and setup pages in `public/`, 59 unit and integration tests, 10 Playwright end-to-end cases. `worker/README.md` for deploy. |
+| `plugin/` | The Claude Code plugin: eight async hooks, three commands, the classifier, the window opener, 39 tests. `plugin/README.md` for install and uninstall. |
+| `worker/` | The lobby: one Cloudflare Worker, one Durable Object, the pure state machine in `src/lobby-core.js`, the room and setup pages in `public/`, 60 unit and integration tests, 10 Playwright end-to-end cases. `worker/README.md` for deploy. |
 | `scripts/probe-mac.sh` | Opens one real room window through the real path and reads back what it measured. |
 | `docs/PROTOCOL.md` | The contract between plugin, lobby, and window: routes, messages, numbers, states. |
 | `docs/PHASE0.md` | What was measured on a Mac, and the ten-minute checklist that is left. |
 | `docs/index.html` | The plan, v0.6. Older plans in `docs/archive/`. |
 | `docs/DECISIONS.md`, `docs/CHANGELOG.md`, `docs/QUESTIONS.md` | Decision log D-01 to D-92, change log, the questions and their answers. |
 | `docs/research/` | Ten research memos: lineage, plugin mechanics, hosting and WebRTC, product history and safety, Omegle UI, ecosystem and naming, retro chat windows, auto-open windows, Poolsuite colour, video dither and window shade. |
-| `design/` | Mockup v2.3: the generator, ten artboards, the canvas, the font (ChiKareGo2, CC BY). |
+| `design/` | Mockup v2.4: the generator, ten artboards, the canvas, the font (ChiKareGo2, CC BY). |
 
 ## Tests
 

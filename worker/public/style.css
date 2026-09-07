@@ -21,8 +21,12 @@
   --chi: 'ChiKareGo2', 'Chicago', Geneva, Verdana, sans-serif;
   --gen: Geneva, Verdana, 'Lucida Grande', sans-serif;
   --tb: 20px;
-  --topic: 22px;
+  --topic: 24px;
   --pad: 6px;
+  /* the desk showing around the panel: enough that Chrome's rounded corners never cut the frame */
+  --edge-x: 8px;
+  --edge-top: 6px;
+  --edge-bottom: 10px;
   --status: 22px;
   --ctl: 44px;
   --feedh: 99px;
@@ -41,8 +45,11 @@ body {
   cursor: default;
   -webkit-user-select: none;
   user-select: none;
-  -webkit-font-smoothing: none;
+  /* Geneva is smoothed, so words do not run together at 12 px on a 2x display; only the pixel
+     font (title, digits, button labels) is drawn hard-edged, which is how it is meant to look. */
+  -webkit-font-smoothing: antialiased;
 }
+.pixel, .tb .title, .btn, .log .say b, .log .big { -webkit-font-smoothing: none; }
 
 .ic { display: inline-block; vertical-align: -1px; image-rendering: pixelated; }
 
@@ -50,8 +57,8 @@ body {
 
 .win {
   position: relative;
-  margin: 4px;
-  height: calc(100vh - 8px);
+  margin: var(--edge-top) var(--edge-x) var(--edge-bottom);
+  height: calc(100vh - var(--edge-top) - var(--edge-bottom));
   display: flex;
   flex-direction: column;
   background: var(--cream);
@@ -100,15 +107,19 @@ body {
 /* count line */
 .topic {
   flex: none;
-  height: var(--topic);
-  padding: 0 9px;
+  min-height: var(--topic);
+  padding: 4px 9px 3px;
   border-top: 1px solid var(--ink);
   background: var(--cream);
-  font: 10px/21px var(--gen);
-  white-space: nowrap; overflow: hidden;
-  display: flex; align-items: center; gap: 6px;
+  font: 12px/16px var(--gen);
+  display: flex; align-items: flex-start; gap: 6px;
 }
-.topic .text { overflow: hidden; text-overflow: ellipsis; }
+/* the icons ride the first line; the text may take two, never more */
+.topic .ic, .topic .dot, .topic .live { margin-top: 4px; }
+.topic .text {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; min-width: 0;
+}
 .dot {
   display: inline-block; width: 7px; height: 7px; border-radius: 50%;
   background: var(--paper); border: 1px solid var(--ink); flex: none;
@@ -189,7 +200,7 @@ body {
   height: var(--status);
   margin-top: var(--pad);
   padding: 0 2px;
-  font: 10px/22px var(--gen);
+  font: 11px/22px var(--gen);
   display: flex; justify-content: space-between; align-items: center;
   white-space: nowrap;
 }
@@ -242,7 +253,7 @@ body {
 }
 .snd {
   display: inline-flex; align-items: center; gap: 5px;
-  font: 10px/12px var(--gen); margin-left: auto; white-space: nowrap;
+  font: 11px/12px var(--gen); margin-left: auto; white-space: nowrap;
   background: none; border: 0; padding: 0; color: var(--ink);
 }
 
@@ -269,7 +280,7 @@ body {
 .feed .cap {
   position: absolute; left: -1px; bottom: -1px; padding: 0 5px; z-index: 2;
   background: var(--paper); border: 1px solid var(--ink);
-  font: 9px/13px var(--gen); display: inline-flex; align-items: center; gap: 4px;
+  font: 10px/14px var(--gen); display: inline-flex; align-items: center; gap: 4px;
 }
 
 /* ---------- window states ---------- */
@@ -277,7 +288,7 @@ body {
 .win[data-shaded='1'] .body,
 .win[data-shaded='1'] .ctl { display: none; }
 .win:not([data-video='1']) .stage { display: none; }
-.win[data-shaded='1'] { justify-content: flex-start; }
+.win[data-shaded='1'] { justify-content: flex-start; height: auto; }
 /* a stale ticket: one line, then the window closes itself */
 .stale { padding: 10px; font: 12px/18px var(--gen); }
 

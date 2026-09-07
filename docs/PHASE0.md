@@ -17,6 +17,18 @@ Browser tests from plan section 06, run on David's Mac on 2026-09-06 with `scrip
 
 Also found and fixed on the way: `AudioContext.resume()` never settles without a gesture, so the window now gives it 400 ms and moves on; before that fix the door sound and the probe both hung. And the plugin's instance quits itself when the lobby says nothing is on screen, so no stray Chrome stays in the Dock, except for ten minutes after setup and twenty seconds after a test window, when the same instance may still be showing you something (D-90).
 
+## Checklist run, 2026-09-07
+
+Run on David's Mac with the plugin installed from the GitHub marketplace, against the live lobby.
+
+| Check | Result |
+| --- | --- |
+| 1. Setup page: mic, notifications, door, test window | Done in the plugin's Chrome profile. The test window opened on the next hook and closed itself. |
+| 2. Probe against the live lobby | `micPermission: granted`, `notificationPermission: granted`, audio context running, MediaStream autoplay ok before and after capture. |
+| 3. Typing while a window opens | A real window opened at 15 s through the installed plugin's hooks while David typed; the frontmost app never became Chrome. David's own read of the keystrokes is the last word. |
+| 4. Hook log for a week | `WAITING_ROOM_LOG` exported in `~/.bash_profile`. |
+| Focus, the case Phase 0 missed | An instance that has been in front (the setup page, or an app window launched in front) brings every later window forward: focus taken within half a second, three of three. A fresh hidden launch stayed behind, as before. Fixed by quitting before an ordinary open (D-93). |
+
 ## Checks still to run
 
 1. Open your setup link, allow the microphone on every visit, allow notifications, and play the door sound.

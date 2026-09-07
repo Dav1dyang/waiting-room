@@ -642,3 +642,23 @@ test('the reaper leaves the browser alone right after setup and around a test wi
   const c = l.apply({ kind: 'count', token: 'tokenaaaa1', now: 692 * S }).find((f) => f.type === 'reply').body;
   assert.equal(c.window, false, 'off ends the setup grace too');
 });
+
+test('a ticket that never connected cannot take over a window that is only dropped', () => {
+  const l = mk();
+  reg(l, 'tokenaaaa1', 0);
+  hook(l, 'tokenaaaa1', 'started', 0);
+  const first = hook(l, 'tokenaaaa1', 'tick', 16 * S);
+  assert.ok(first.open, 'the first ticket');
+  // Nobody connected, so after OPEN_RETRY the lobby hands out a second one.
+  const second = hook(l, 'tokenaaaa1', 'tick', 50 * S);
+  assert.ok(second.open, 'the retry ticket');
+  assert.notEqual(ticketOf(first), ticketOf(second));
+  const ok = wsOpen(l, ticketOf(second), 51 * S).find((f) => f.type === 'attach');
+  assert.equal(ok.ok, true, 'the second ticket connects');
+  l.apply({ kind: 'ws_close', token: 'tokenaaaa1', conn: ok.conn, now: 52 * S }); // a drop, not a goodbye
+  assert.equal(l.s.tokens.tokenaaaa1.win.connected, false, 'in its grace');
+  const late = wsOpen(l, ticketOf(first), 53 * S).find((f) => f.type === 'attach');
+  assert.equal(late.ok, false, 'an older ticket cannot replace a window in its grace');
+  const back = wsOpen(l, ticketOf(second), 54 * S).find((f) => f.type === 'attach');
+  assert.equal(back.ok, true, 'the same ticket comes back');
+});
