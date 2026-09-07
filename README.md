@@ -60,13 +60,13 @@ Each hook sends one small POST with exactly five fields: `token`, `event` (one o
 | `docs/PROTOCOL.md` | The contract between plugin, lobby, and window: routes, messages, numbers, states. |
 | `docs/PHASE0.md` | What was measured on a Mac, and the ten-minute checklist that is left. |
 | `docs/index.html` | The plan, v0.6. Older plans in `docs/archive/`. |
-| `docs/DECISIONS.md`, `docs/CHANGELOG.md`, `docs/QUESTIONS.md` | Decision log D-01 to D-92, change log, the questions and their answers. |
+| `docs/DECISIONS.md`, `docs/CHANGELOG.md`, `docs/QUESTIONS.md` | Decision log D-01 to D-97, change log, the questions and their answers. |
 | `docs/research/` | Ten research memos: lineage, plugin mechanics, hosting and WebRTC, product history and safety, Omegle UI, ecosystem and naming, retro chat windows, auto-open windows, Poolsuite colour, video dither and window shade. |
 | `design/` | Mockup v2.5: the generator, ten artboards, the canvas, the font. |
 
 ## Made with
 
-Plan written 2026-09-05 to 2026-09-06 with Claude Code (Fable 5.1), ten Opus 5 research agents, three Opus 5 builders, and two review passes (Codex, Claude). The plan: https://claude.ai/code/artifact/7f5e1d8a-4c07-46ab-9506-507936b4ff27.
+Planned and built 2026-09-05 to 2026-09-07 with Claude Code (Fable 5.1): ten Opus 5 research agents, three Opus 5 builders, and review passes by Codex and Claude after every phase. The plan: https://claude.ai/code/artifact/7f5e1d8a-4c07-46ab-9506-507936b4ff27.
 
 ## Tests
 
@@ -81,7 +81,6 @@ bash ../scripts/probe-mac.sh          # one real window on this Mac (needs Googl
 ```
 
 To collect the Phase 0 timing data, set `WAITING_ROOM_LOG=~/.waiting-room/log.txt` in your shell for a week. Each hook appends one line: the five fields and the lobby's answer (open, quit, or nothing).
-
 
 ## License
 
