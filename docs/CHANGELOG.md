@@ -13,6 +13,7 @@ Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 - Root README rewritten for the built repo; plugin and worker READMEs by the builders.
 - The internal code review of the whole branch was cut short by the session limit; its one finished verifier confirmed that background hook work can die at session teardown, fixed by a detached delivery step (D-89).
 - Codex copy review (43 notes): the clarity and privacy-scope fixes applied across the window, the setup page, the terminal, the commands, and the READMEs; the chatroom voice kept on purpose (D-88). The internal code review of the whole branch ran after the build.
+- Found on the final walk-through: a short first turn after `on` made the lobby tell the plugin to quit its Chrome, setup page and all. The lobby now holds off for ten minutes after register and twenty seconds after a test window (D-90); `off` ends both. New vars SETUP_GRACE and REHEARSAL_GRACE, one core test, redeployed and checked live. The wrangler-dev test and the hang-up end-to-end case had loose expectations; tightened.
 
 ## 2026-09-06 (v0.5, fourth round of answers)
 

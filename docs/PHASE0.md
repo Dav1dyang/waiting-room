@@ -15,7 +15,7 @@ Browser tests from plan section 06, run on David's Mac on 2026-09-06 with `scrip
 | 10. Two hooks, one window | Verified in the plugin tests (two concurrent `signal.sh` runs, one open) and live in a real `claude -p` run. | D-58 holds. |
 | Rehearsal (D-84) | The test window opened behind the terminal, showed "This is a test. Closing in 5.", and closed itself. | The setup page's rehearsal is the real path. |
 
-Also found and fixed on the way: `AudioContext.resume()` never settles without a gesture, so the window now gives it 400 ms and moves on; before that fix the door sound and the probe both hung. And the plugin's instance quits itself when the lobby says nothing is on screen, so no stray Chrome stays in the Dock.
+Also found and fixed on the way: `AudioContext.resume()` never settles without a gesture, so the window now gives it 400 ms and moves on; before that fix the door sound and the probe both hung. And the plugin's instance quits itself when the lobby says nothing is on screen, so no stray Chrome stays in the Dock, except for ten minutes after setup and twenty seconds after a test window, when the same instance may still be showing you something (D-90).
 
 ## Checks still to run
 

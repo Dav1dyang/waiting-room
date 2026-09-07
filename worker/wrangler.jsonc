@@ -38,6 +38,8 @@
     "TICKET_TTL": 600000,    // a room ticket must be used inside this window
     "MAX_OPENS": 2,          // opens per task, counting the retry
     "RECONNECT_GRACE": 15000,// a dropped window may come back inside this window
+    "SETUP_GRACE": 600000,   // after register the setup page may be open: no quit hint
+    "REHEARSAL_GRACE": 20000,// a test window is still closing itself: no quit hint
     "RELAY_BUDGET_GB": 500,  // stop minting TURN credentials past this monthly estimate
   }
 }

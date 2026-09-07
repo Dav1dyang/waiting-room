@@ -32,7 +32,7 @@ One small POST per hook: your token, one of five words (`started`, `tick`, `need
 | `docs/PROTOCOL.md` | The contract between plugin, lobby, and window: routes, messages, numbers, states. |
 | `docs/PHASE0.md` | What was measured on a Mac, and the ten-minute checklist that is left. |
 | `docs/index.html` | The plan, v0.6. Older plans in `docs/archive/`. |
-| `docs/DECISIONS.md`, `docs/CHANGELOG.md`, `docs/QUESTIONS.md` | Decision log D-01 to D-87, change log, the questions and their answers. |
+| `docs/DECISIONS.md`, `docs/CHANGELOG.md`, `docs/QUESTIONS.md` | Decision log D-01 to D-90, change log, the questions and their answers. |
 | `docs/research/` | Ten research memos: lineage, plugin mechanics, hosting and WebRTC, product history and safety, Omegle UI, ecosystem and naming, retro chat windows, auto-open windows, Poolsuite colour, video dither and window shade. |
 | `design/` | Mockup v2.3: the generator, ten artboards, the canvas, the font (ChiKareGo2, CC BY). |
 
