@@ -88,6 +88,15 @@ invite     the code you registered with
 endpoint   an optional lobby URL (you create this one)
 ```
 
+## Releasing a change
+
+`claude plugin update` compares version numbers, not commits. Bump `version` in both `plugin/.claude-plugin/plugin.json` and the root `.claude-plugin/marketplace.json` with every change that should reach installed copies, then on each machine:
+
+```
+claude plugin marketplace update waiting-room
+claude plugin update waiting-room@waiting-room
+```
+
 ## Uninstall
 
 ```
