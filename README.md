@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-000000.svg)](LICENSE)
 
-Why wait alone when you can wait with others? Introducing the Claude Waiting Room, an Omegle-like voice & video chat room that matches you with someone else who is also waiting for their Claude. Stop crossing your arms with a grumpy face, staring at your computer screen alone. You can do that together with a stranger, and potentially meet new friends or even new love?!
+Why wait alone when you can wait with others? Introducing the Claude Waiting Room, an Omegle-like voice & video chat room that matches you with someone else who is also waiting for their Claude. Stop crossing your arms with a grumpy face and staring at your computer screen alone😢 You can do that together with a stranger and potentially meet new friends?
 
 A Claude Code plugin. The plugin never tells them anything about your task.
 
