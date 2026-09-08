@@ -1,5 +1,7 @@
 # waiting-room
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-000000.svg)](LICENSE)
+
 **Why wait alone?**
 
 Your Claude is working. You are sitting there, arms crossed, staring at a terminal. Somewhere, so is someone else. waiting-room is a Claude Code plugin that puts the two of you on a call while you both wait. Think Omegle, except the only thing you have in common is a spinner.
