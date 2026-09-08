@@ -6,6 +6,8 @@ Why wait alone when you can wait with others? Introducing the Claude Waiting Roo
 
 A Claude Code plugin. The plugin never tells them anything about your task.
 
+Inspired by a convo with Becky Button!
+
 ## How it works
 
 1. Your Claude works for more than 15 seconds. A small window opens behind your terminal with one line: how many others are waiting.
