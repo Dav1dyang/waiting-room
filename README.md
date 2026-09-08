@@ -18,7 +18,7 @@ Inspired by a convo with Becky Button!
 
 ![The room: a Classic Mac window with the log, two meters, and the buttons](docs/images/room.png)
 
-Classic Mac window dressing in the Poolsuite spirit: cream panel, one-pixel black, pastel desktop tints, pixel type for the title and labels, Geneva for the lines, a bar-graph meter, and a dot screen over video. Nothing here is an Apple or Poolsuite asset. Omegle is the joke and the reference, never the copy. The mockup: https://claude.ai/code/artifact/447cf200-0465-4dcf-8ff0-984537a43877
+Classic Mac window dressing in the Poolsuite spirit: cream panel, one-pixel black, pastel desktop tints, pixel type for the title and labels, Geneva for the lines, a bar-graph meter, and a dot screen over video. Nothing here is an Apple or Poolsuite asset. Omegle is the joke and the reference, never the copy.
 
 ## Install
 
@@ -68,7 +68,7 @@ Each hook sends one small POST with exactly five fields: `token`, `event` (one o
 
 ## Made with
 
-Planned and built 2026-09-05 to 2026-09-07 with Claude Code (Fable 5.1): ten Opus 5 research agents, three Opus 5 builders, and review passes by Codex and Claude after every phase. The plan: https://claude.ai/code/artifact/7f5e1d8a-4c07-46ab-9506-507936b4ff27.
+Planned and built 2026-09-05 to 2026-09-07 with Claude Code (Fable 5.1): ten Opus 5 research agents, three Opus 5 builders, and review passes by Codex and Claude after every phase.
 
 ## Tests
 
