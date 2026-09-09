@@ -728,9 +728,9 @@ test('probes are two per token and forty in all, oldest out; a stray false is no
   assert.deepEqual(kinds(fx, 'tokenaaaa1').slice(0, 1), ['line:quiet_room'], 'a stray false from the other side did not stretch the room');
 });
 
-test('stats are counts only: registrations, opens, rooms, reports, and the now numbers', () => {
+test('the health check is counts only: registrations, opens, rooms, reports, and the now numbers', () => {
   const l = mk({ PEER_COOLDOWN: 0 });
-  const stats = (now) => l.apply({ kind: 'stats', now }).find((f) => f.type === 'reply').body;
+  const stats = (now) => l.apply({ kind: 'health', now }).find((f) => f.type === 'reply').body;
   assert.equal(stats(0).roomsEver, 0);
   bringUp(l, 'tokenaaaa1', 0);
   const now = bringUp(l, 'tokenbbbb2', 1 * S);

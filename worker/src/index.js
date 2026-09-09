@@ -8,7 +8,7 @@
 export { LobbyObject } from './lobby-do.js';
 
 const POST_ROUTES = new Set(['/api/register', '/api/hook', '/api/off', '/api/rehearse']);
-const GET_ROUTES = new Set(['/api/count', '/api/probes', '/api/stats']);
+const GET_ROUTES = new Set(['/api/count', '/api/probes', '/api/health']);
 const MAX_BODY = 4096;
 const HTML_HEADERS = {
   'permissions-policy': 'microphone=(self), camera=(self)',

@@ -67,7 +67,7 @@ Other HTTP routes:
 | `GET /api/count?t=TOKEN` | | `{ count, enabled, window }`; count means others, never you; window is true while a window exists or is on its way; a token nobody registered gets `{ count:0, enabled:false, window:false }` |
 | `POST /api/rehearse` | `{ token }` | `{ ok }`, next hook opens a test window (D-84) |
 | `GET /api/probes?t=TOKEN` | | own Phase 0 probe records |
-| `GET /api/stats` | | counts only, never who: registrations, opens, rooms, and reports since the lobby first counted; people, people who ran Claude, on now, waiting now, rooms now, blocked now (D-101) |
+| `GET /api/health` | | the debugging question "is the lobby pairing people at all?": counts of registrations, opens, rooms, and reports since it first counted, plus people, people who ran Claude, on now, waiting now, rooms now, blocked now. Counts only; there is no per-person record in the lobby to read, not even for the operator (D-101) |
 | `GET /ws?t=TICKET` | | WebSocket upgrade |
 
 ## 4. Task states, per token

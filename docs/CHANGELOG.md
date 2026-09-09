@@ -4,7 +4,7 @@ Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 
 ## 2026-09-08 (v0.6.4, counts)
 
-- `GET /api/stats`: registrations, opens, rooms, and reports since the lobby first counted, plus the now numbers; counts only, never who (D-101).
+- `GET /api/health`, for one debugging question: is the lobby pairing people at all? Counts of registrations, opens, rooms, and reports since it first counted, plus the now numbers. Counts only; no per-person record exists to read (D-101).
 
 ## 2026-09-07 (v0.6.3, public)
 

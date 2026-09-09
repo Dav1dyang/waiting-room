@@ -92,7 +92,7 @@ export class Lobby {
         break;
       }
       case 'rehearse': this.rehearse(ev); break;
-      case 'stats': this.reply(this.stats(now)); break;
+      case 'health': this.reply(this.health(now)); break;
       case 'probes': this.reply({ probes: (this.s.probes || []).filter((x) => x.token === ev.token).map(({ at, data }) => ({ at, data })) }); break;
       case 'hook': this.hook(ev); break;
       case 'ws_open': this.wsOpen(ev); break;
@@ -146,14 +146,17 @@ export class Lobby {
       lastPeers: {}, rehearse: false, reports: {}, blockedUntil: 0, lastRegisterAt: 0, lastRehearsalAt: 0 };
   }
 
-  /** Counts only, kept since the first count: how many, never who (D-101). */
+  /**
+   * The health check: is the lobby pairing people at all? Counts, kept since the first count,
+   * and nothing else. There is no per-person record here to read, not even for the operator (D-101).
+   */
   bump(key, now) {
     const z = this.s.stats;
     if (!z.since) z.since = now;
     z[key] = (z[key] || 0) + 1;
   }
 
-  stats(now) {
+  health(now) {
     const tokens = Object.values(this.s.tokens);
     const z = this.s.stats;
     return {
