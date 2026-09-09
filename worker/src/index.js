@@ -10,6 +10,9 @@ export { LobbyObject } from './lobby-do.js';
 const POST_ROUTES = new Set(['/api/register', '/api/hook', '/api/off', '/api/rehearse']);
 const GET_ROUTES = new Set(['/api/count', '/api/probes', '/api/health']);
 const MAX_BODY = 4096;
+// The public health view, remembered per isolate, so a poll never reaches the lobby.
+let publicHealth = { at: 0, body: null };
+const PUBLIC_HEALTH_MS = 5000;
 const HTML_HEADERS = {
   'permissions-policy': 'microphone=(self), camera=(self)',
   'x-content-type-options': 'nosniff',
@@ -25,6 +28,27 @@ export default {
         return json({ error: 'upgrade' }, 426);
       }
       return toLobby(request, env, url);
+    }
+
+    // Everything but hooks meets a per-address limit at the edge, before the one lobby object is
+    // woken: hooks carry their own token and caps. Without the binding (local dev) nothing changes.
+    if (p !== '/api/hook' && p.startsWith('/api/') && env.RL_PUBLIC) {
+      const ip = request.headers.get('cf-connecting-ip') || 'none';
+      let allowed = true;
+      try {
+        allowed = (await env.RL_PUBLIC.limit({ key: ip })).success;
+      } catch {
+        allowed = true;
+      }
+      if (!allowed) return json({ error: 'busy' }, 429);
+    }
+    if (p === '/api/health' && request.method === 'GET' && !url.searchParams.get('k')) {
+      const now = Date.now();
+      if (!publicHealth.body || now - publicHealth.at > PUBLIC_HEALTH_MS) {
+        const res = await toLobby(request, env, url);
+        publicHealth = { at: now, body: await res.text() };
+      }
+      return new Response(publicHealth.body, { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=5' } });
     }
 
     if (POST_ROUTES.has(p)) {

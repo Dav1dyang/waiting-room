@@ -35,7 +35,7 @@ before(async () => {
   child = spawn(BIN, [
     'dev', '--port', String(port), '--ip', '127.0.0.1', '--inspector-port', '0',
     '--persist-to', persist,
-    '--var', 'T:1000', '--var', 'INVITES:DUCK', '--var', 'N:8000',
+    '--var', 'T:1000', '--var', 'INVITES:DUCK', '--var', 'N:8000', '--var', 'HEALTH_KEY:testhealthkey0123',
   ], {
     cwd: DIR,
     env: { ...process.env, WRANGLER_SEND_METRICS: 'false', CI: '1' },
@@ -176,8 +176,10 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
   assert.deepEqual((await get('/api/count?t=' + C)).body, { count: 0, enabled: true, window: true }, 'a rehearsal joins no queue');
   c.ws.close();
 
-  // The health check answers numbers only.
-  const health = (await get('/api/health')).body;
+  // The health check: one bit for everyone, the numbers for the operator's key.
+  assert.deepEqual((await get('/api/health')).body, { ok: true, paired: true }, 'the public view');
+  assert.deepEqual((await get('/api/health?k=wrong')).body, { ok: true, paired: true }, 'a wrong key is the public view');
+  const health = (await get('/api/health?k=testhealthkey0123')).body;
   for (const key of ['registrationsEver', 'opensEver', 'roomsEver', 'reportsEver', 'people', 'peopleWhoRanClaude', 'onNow', 'waitingNow', 'roomsNow', 'blockedNow']) {
     assert.equal(typeof health[key], 'number', key);
   }

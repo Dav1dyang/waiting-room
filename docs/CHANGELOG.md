@@ -4,7 +4,8 @@ Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 
 ## 2026-09-08 (v0.6.4, counts)
 
-- `GET /api/health`, for one debugging question: is the lobby pairing people at all? Counts of registrations, opens, rooms, and reports since it first counted, plus the now numbers. Counts only; no per-person record exists to read (D-101).
+- `GET /api/health`, for one debugging question: is the lobby pairing people at all? For everyone, `{ ok, paired }`; with the operator's key, counts of registrations, opens, rooms, and reports since it first counted, plus the now numbers. Counts only; no per-person record exists to read (D-101, D-102).
+- Every `/api` route but `hook` meets a per-address rate limit at the edge before the lobby object is woken (D-102).
 
 ## 2026-09-07 (v0.6.3, public)
 

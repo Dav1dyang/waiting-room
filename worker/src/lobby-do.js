@@ -80,8 +80,17 @@ export class LobbyObject extends DurableObject {
     // Reads that cannot change anything never run the core, so a poller cannot spend the
     // object's request budget on state writes. Health is computed at most once every five seconds.
     if (url.pathname === '/api/health') {
-      if (now - this.healthMemo.at > HEALTH_MEMO_MS) this.healthMemo = { at: now, body: this.lobby.health(now) };
-      return json(this.healthMemo.body);
+      // At most once every five seconds the clock advances (rooms and tasks that are over end)
+      // and the numbers are read. Everyone gets the one-bit answer; the operator's key, kept as a
+      // secret, unlocks the counts (D-102).
+      if (now - this.healthMemo.at > HEALTH_MEMO_MS) {
+        await this.run({ kind: 'tick', now });
+        this.healthMemo = { at: now, body: this.lobby.health(now) };
+      }
+      const h = this.healthMemo.body;
+      const key = url.searchParams.get('k') || '';
+      const exact = typeof this.env.HEALTH_KEY === 'string' && this.env.HEALTH_KEY.length >= 16 && key === this.env.HEALTH_KEY;
+      return json(exact ? h : { ok: true, paired: h.roomsEver > 0 });
     }
     if (url.pathname === '/api/count' || url.pathname === '/api/probes') {
       const kind = url.pathname === '/api/count' ? 'count' : 'probes';
