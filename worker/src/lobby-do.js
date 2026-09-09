@@ -17,6 +17,7 @@ const MS_VARS = ['T', 'F', 'N', 'G', 'P', 'Q', 'ROOM_MAX', 'PEER_COOLDOWN', 'OPE
   'COUNTDOWN', 'MAX_OPENS', 'RECONNECT_GRACE', 'SETUP_GRACE', 'REHEARSAL_GRACE'];
 const POST_KINDS = { '/api/register': 'register', '/api/hook': 'hook', '/api/off': 'off', '/api/rehearse': 'rehearse' };
 const HOOKS_PER_SECOND = 10;
+const HEALTH_MEMO_MS = 5000;
 // A window sends a handful of frames a second at most (ICE bursts, speech edges, one probe).
 const FRAME_RATE = 40;
 const FRAME_BURST = 120;
@@ -45,6 +46,7 @@ export class LobbyObject extends DurableObject {
     this.regFailsAll = { n: 0, until: 0 };
     this.regOk = new Map();
     this.capsDirty = false;
+    this.healthMemo = { at: 0, body: null };
     ctx.blockConcurrencyWhile(async () => {
       // The caps outlive an eviction: they are written with the state whenever they change.
       const caps = await ctx.storage.get('caps');
@@ -75,10 +77,17 @@ export class LobbyObject extends DurableObject {
 
     if (url.pathname === '/ws') return this.openSocket(url, now);
 
-    if (url.pathname === '/api/health') return json(await this.run({ kind: 'health', now }));
+    // Reads that cannot change anything never run the core, so a poller cannot spend the
+    // object's request budget on state writes. Health is computed at most once every five seconds.
+    if (url.pathname === '/api/health') {
+      if (now - this.healthMemo.at > HEALTH_MEMO_MS) this.healthMemo = { at: now, body: this.lobby.health(now) };
+      return json(this.healthMemo.body);
+    }
     if (url.pathname === '/api/count' || url.pathname === '/api/probes') {
       const kind = url.pathname === '/api/count' ? 'count' : 'probes';
-      return json(await this.run({ kind, token: url.searchParams.get('t') || '', now }));
+      const t = url.searchParams.get('t') || '';
+      if (!this.lobby.tok(t)) return json(kind === 'count' ? { count: 0, enabled: false, window: false } : { probes: [] });
+      return json(await this.run({ kind, token: t, now }));
     }
 
     const kind = POST_KINDS[url.pathname];

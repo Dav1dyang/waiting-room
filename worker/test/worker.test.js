@@ -176,6 +176,13 @@ test('one whole wait, through the Worker', { timeout: 55_000 }, async (t) => {
   assert.deepEqual((await get('/api/count?t=' + C)).body, { count: 0, enabled: true, window: true }, 'a rehearsal joins no queue');
   c.ws.close();
 
+  // The health check answers numbers only.
+  const health = (await get('/api/health')).body;
+  for (const key of ['registrationsEver', 'opensEver', 'roomsEver', 'reportsEver', 'people', 'peopleWhoRanClaude', 'onNow', 'waitingNow', 'roomsNow', 'blockedNow']) {
+    assert.equal(typeof health[key], 'number', key);
+  }
+  assert.ok(health.roomsEver >= 1 && health.opensEver >= 2, 'the wait above was counted');
+
   // Nobody asked: a token nobody registered gets no count, and an oversized body is refused
   // before it is read whole.
   assert.deepEqual((await get('/api/count?t=nobodyzzzz9')).body, { count: 0, enabled: false, window: false });
