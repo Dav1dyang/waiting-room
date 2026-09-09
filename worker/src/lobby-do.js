@@ -75,6 +75,7 @@ export class LobbyObject extends DurableObject {
 
     if (url.pathname === '/ws') return this.openSocket(url, now);
 
+    if (url.pathname === '/api/stats') return json(await this.run({ kind: 'stats', now }));
     if (url.pathname === '/api/count' || url.pathname === '/api/probes') {
       const kind = url.pathname === '/api/count' ? 'count' : 'probes';
       return json(await this.run({ kind, token: url.searchParams.get('t') || '', now }));

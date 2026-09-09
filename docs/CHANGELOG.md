@@ -2,6 +2,10 @@
 
 Newest first. One line per change to the plan. Decisions live in DECISIONS.md.
 
+## 2026-09-08 (v0.6.4, counts)
+
+- `GET /api/stats`: registrations, opens, rooms, and reports since the lobby first counted, plus the now numbers; counts only, never who (D-101).
+
 ## 2026-09-07 (v0.6.3, public)
 
 - The repo is public under MIT (the ChiKareGo2 font keeps its CC BY 4.0). Commit authors rewritten to the GitHub no-reply address first. README rewritten in David's voice after a Codex copy review, with a screenshot of the room.

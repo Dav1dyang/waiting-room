@@ -727,3 +727,24 @@ test('probes are two per token and forty in all, oldest out; a stray false is no
   const fx = tick(m, now + 56 * S);
   assert.deepEqual(kinds(fx, 'tokenaaaa1').slice(0, 1), ['line:quiet_room'], 'a stray false from the other side did not stretch the room');
 });
+
+test('stats are counts only: registrations, opens, rooms, reports, and the now numbers', () => {
+  const l = mk({ PEER_COOLDOWN: 0 });
+  const stats = (now) => l.apply({ kind: 'stats', now }).find((f) => f.type === 'reply').body;
+  assert.equal(stats(0).roomsEver, 0);
+  bringUp(l, 'tokenaaaa1', 0);
+  const now = bringUp(l, 'tokenbbbb2', 1 * S);
+  reg(l, 'tokenaaaa1', now); // turning on again is not a registration
+  const z = stats(now + S);
+  assert.equal(z.registrationsEver, 2);
+  assert.equal(z.opensEver, 2);
+  assert.equal(z.roomsEver, 1);
+  assert.equal(z.roomsNow, 1);
+  assert.equal(z.people, 2);
+  assert.equal(z.peopleWhoRanClaude, 2);
+  assert.equal(z.onNow, 2);
+  assert.equal(z.waitingNow, 0, 'in a room is not waiting');
+  wsMsg(l, 'tokenaaaa1', { type: 'report' }, now + 2 * S);
+  assert.equal(stats(now + 3 * S).reportsEver, 1);
+  for (const key of Object.keys(z)) assert.equal(typeof z[key], 'number', key + ' is a number, never a token');
+});
