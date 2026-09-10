@@ -63,6 +63,8 @@ export function hydrate(state) {
     r.lastSpeechAt = r.lastSpeechAt || r.createdAt || 0;
   }
   s.probes = probes.slice(-DEFAULTS.PROBES_TOTAL);
+  const z = { since: 0, registrations: 0, opens: 0, rooms: 0, reports: 0 };
+  s.stats = s.stats && typeof s.stats === 'object' ? { ...z, ...s.stats } : z;
   return s;
 }
 
@@ -90,6 +92,7 @@ export class Lobby {
         break;
       }
       case 'rehearse': this.rehearse(ev); break;
+      case 'health': this.reply(this.health(now)); break;
       case 'probes': this.reply({ probes: (this.s.probes || []).filter((x) => x.token === ev.token).map(({ at, data }) => ({ at, data })) }); break;
       case 'hook': this.hook(ev); break;
       case 'ws_open': this.wsOpen(ev); break;
@@ -128,6 +131,7 @@ export class Lobby {
       if (Object.keys(this.s.tokens).length >= this.cfg.MAX_TOKENS) return this.reply({ ok: false, error: 'busy' });
     }
     const t = known || this.newToken(now);
+    if (!known) this.bump('registrations', now);
     if (typeof ipHash === 'string' && ipHash) t.ipHash = ipHash.slice(0, 32);
     t.enabled = true;
     t.invite = typeof invite === 'string' && invite ? invite.slice(0, 64) : t.invite || null;
@@ -140,6 +144,34 @@ export class Lobby {
   newToken(now) {
     return { enabled: false, invite: null, registeredAt: now, lastHookAt: now, hooked: false, ipHash: null, task: null, win: null, room: null,
       lastPeers: {}, rehearse: false, reports: {}, blockedUntil: 0, lastRegisterAt: 0, lastRehearsalAt: 0 };
+  }
+
+  /**
+   * The health check: is the lobby pairing people at all? Counts, kept since the first count,
+   * and nothing else. There is no per-person record here to read, not even for the operator (D-101).
+   */
+  bump(key, now) {
+    const z = this.s.stats;
+    if (!z.since) z.since = now;
+    z[key] = (z[key] || 0) + 1;
+  }
+
+  health(now) {
+    const tokens = Object.values(this.s.tokens);
+    const z = this.s.stats;
+    return {
+      since: z.since,
+      registrationsEver: z.registrations,
+      opensEver: z.opens,
+      roomsEver: z.rooms,
+      reportsEver: z.reports,
+      people: tokens.length,
+      peopleWhoRanClaude: tokens.filter((t) => t.hooked).length,
+      onNow: tokens.filter((t) => t.enabled).length,
+      waitingNow: this.count(),
+      roomsNow: Object.keys(this.s.rooms).length,
+      blockedNow: tokens.filter((t) => t.blockedUntil > now).length,
+    };
   }
 
   /** When the lobby is full, the tokens that registered and never sent a hook go first. */
@@ -233,6 +265,7 @@ export class Lobby {
       (task.opens === 0 || (!task.everConnected && task.opens < this.cfg.MAX_OPENS && now - task.lastOpenAt > this.cfg.OPEN_RETRY));
     if (canOpen) {
       task.opens += 1;
+      this.bump('opens', now);
       task.lastOpenAt = now;
       const ticket = this.makeTicket(token, now, false, task.id);
       return this.reply({ open: origin + '/room?t=' + ticket });
@@ -521,6 +554,7 @@ export class Lobby {
       // Three reports must come from three homes, not three tokens from one (the lobby is open).
       const reporter = this.tok(token);
       p.reports[(reporter && reporter.ipHash) || token] = now;
+      this.bump('reports', now);
       if (Object.keys(p.reports).length >= this.cfg.REPORT_BLOCK) p.blockedUntil = now + this.cfg.BLOCK_MS;
     }
     if (room) return this.leaveRoom(token, now, 'report');
@@ -633,6 +667,7 @@ export class Lobby {
   makeRoom(a, b, now) {
     const id = 'r' + this.rand();
     const room = { id, a, b, createdAt: now, lastSpeechAt: now, speaking: {}, video: {}, videoLined: false, closing: null };
+    this.bump('rooms', now);
     this.s.rooms[id] = room;
     this.s.tokens[a].room = id;
     this.s.tokens[b].room = id;

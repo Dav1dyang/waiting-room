@@ -24,6 +24,10 @@
 
   // Every number from docs/PROTOCOL.md section 2. Milliseconds unless said otherwise.
   // Change one here and redeploy; the Durable Object reads them on every cold start.
+  "ratelimits": [
+    // Per address, at the edge, for every /api route but hooks (D-102). Period is 60 s.
+    { "name": "RL_PUBLIC", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } }
+  ],
   "vars": {
     "T": 15000,              // arm threshold, a task shorter than this never makes a window
     "F": 20000,              // freshness, pairing needs a hook this recent

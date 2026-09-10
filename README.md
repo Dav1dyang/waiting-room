@@ -50,7 +50,7 @@ Audio first. Video only when you both click Show video. Your task stays on your 
 
 ## What leaves your machine
 
-Each hook sends one small POST with exactly five fields: `token`, `event` (one of `started`, `tick`, `needs_you`, `paused`, `stopped`), `why`, `session` (a hash of the session id), and `ts`. Nothing else. The classifier runs on your machine (`plugin/scripts/classify.js`), and the tests check that no prompt, path, or tool input ever reaches the body. The call itself goes browser to browser, so the two browsers exchange network addresses the way every WebRTC call does; the lobby only passes the messages that set it up.
+Each hook sends one small POST with exactly five fields: `token`, `event` (one of `started`, `tick`, `needs_you`, `paused`, `stopped`), `why`, `session` (a hash of the session id), and `ts`. Nothing else. The classifier runs on your machine (`plugin/scripts/classify.js`), and the tests check that no prompt, path, or tool input ever reaches the body. The call itself goes browser to browser, so the two browsers exchange network addresses the way every WebRTC call does; the lobby only passes the messages that set it up. For debugging, `/api/health` answers one question for everyone, whether the lobby has ever paired two people, and gives the operator a handful of counts (how many registered, how many rooms formed) behind a key; there is no per-person record behind them, not even for the operator.
 
 ## What is where
 
